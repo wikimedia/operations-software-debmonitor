@@ -1,3 +1,6 @@
 from django.contrib import admin
+from hosts.models import Host, HostPackage
 
-# Register your models here.
+
+admin.site.register(Host)
+admin.site.register(HostPackage)

@@ -1,0 +1,13 @@
+{% extends "../base_table.html" %}
+
+{% block table_body %}
+{% for package in packages %}
+<tr>
+  <td>
+    <a href="{% url 'src_packages:detail' package.name %}">{{ package.name }}</a>
+  </td>
+  <td>{{ package.versions_count }}</td>
+  <td>{{ package.os_list }}</td>
+</tr>
+{% endfor %}
+{% endblock %}

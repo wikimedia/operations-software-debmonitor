@@ -1,0 +1,25 @@
+{% extends "../base_table.html" %}
+{% load bin_package_extras %}
+
+{% block table_body %}
+{% for host in hosts %}
+<tr>
+  <td>
+    <div class="row">
+      <div class="col-md-8"><a href="{% url 'hosts:detail' host.name %}">{{ host.name }}</a></div>
+      <div class="col-md-4">
+        {% if host.packages_count %}<span class="badge badge-primary align-text-bottom" data-toggle="tooltip" data-trigger="hover" data-delay='{"show": 800, "hide": 50}' title="{{ table_headers.0.badges.0.tooltip }}" aria-pressed="true">{{ host.packages_count }}</span>{% endif %}
+        {% if host.upgrades_count %}<span class="badge badge-warning align-text-bottom" data-toggle="tooltip" data-trigger="hover" data-delay='{"show": 800, "hide": 50}' title="{{ table_headers.0.badges.1.tooltip }}" aria-pressed="true">{{ host.upgrades_count }}</span>{% endif %}
+        {% if security_upgrades|dict_get:host.id %}<span class="badge badge-danger align-text-bottom" data-toggle="tooltip" data-trigger="hover" data-delay='{"show": 800, "hide": 50}' title="{{ table_headers.0.badges.2.tooltip }}" aria-pressed="true">{{ security_upgrades|dict_get:host.id }}</span>{% endif %}
+      </div>
+    </div>
+  </td>
+  <td>{{ host.os.name }}</td>
+  <td>{{ host.modified|timesince }} ago</td>
+  <td>{{ host.packages_count }}</td>
+  <td>{{ host.upgrades_count }}</td>
+  <td>{% if security_upgrades|dict_get:host.id %}{{ security_upgrades|dict_get:host.id }}{% else %}0{% endif %}</td>
+  <td>{{ host.modified|date:"U" }}</td>
+</tr>
+{% endfor %}
+{% endblock %}

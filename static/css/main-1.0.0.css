@@ -1,0 +1,41 @@
+html {
+  min-height: 100%;
+  position: relative;
+}
+
+body {
+  margin-bottom: 55px;
+}
+
+.footer {
+  background-color: #f5f5f5;
+  bottom: 0;
+  height: 40px;
+  line-height: 40px;
+  position: absolute;
+  width: 100%;
+}
+
+.table-borderless td, .table-borderless th {
+    border: 0;
+}
+
+#debmonitor-th1 {
+    pointer-events: none;
+}
+
+#debmonitor-th1::after, #debmonitor-th1-title, #customSort1, #customSort2, #customSort3 {
+    pointer-events: auto;
+}
+
+tr.table-group1, tr.table-group1:hover {
+    background-color: #ccc !important;
+}
+
+tr.table-group2, tr.table-group2:hover {
+    background-color: #ddd !important;
+}
+
+.hide-loading {
+    display: none;
+}

@@ -1,0 +1,13 @@
+{% extends "../base_table.html" %}
+
+{% block table_body %}
+{% for kernel in kernels %}
+<tr>
+  <td>{{ kernel.os__name }}</td>
+  <td>
+    <a href="{% url 'kernels:detail' kernel.running_kernel_slug %}">{{ kernel.running_kernel }}</a>
+  </td>
+  <td>{{ kernel.hosts_count }}</td>
+</tr>
+{% endfor %}
+{% endblock %}

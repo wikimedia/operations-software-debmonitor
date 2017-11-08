@@ -1,0 +1,13 @@
+{
+    "ALLOWED_HOSTS": ["localhost", "debmonitor.example.com"],
+    "SECRET_KEY": "randomly generated string",
+    "STATIC_ROOT": "/path/to/collect/static/files/",
+    "MYSQL": {
+        "DB_NAME": "debmonitor",
+        "DB_USER": "debmonitor",
+        "DB_PASSWORD": "mysql password for the DB_USER user",
+        "DB_HOST": "localhost",
+        "DB_PORT": 3306
+    },
+    "LOG_DB_QUERIES": false
+}

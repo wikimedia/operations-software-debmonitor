@@ -1,0 +1,15 @@
+{% extends "../base_table.html" %}
+
+{% block table_body %}
+{% for package_version in package_versions %}
+<tr>
+  <td>{{ package_version.os.name }}</td>
+  <td>{{ package_version.version }}</td>
+  <td>
+    {% for binary in package_version.binaries.all %}
+    <a href="{% url 'bin_packages:detail' binary.package.name %}">{{ binary.package.name }}</a>{% if not forloop.last %}, {% endif %}
+    {% endfor %}
+  </td>
+</tr>
+{% endfor %}
+{% endblock %}

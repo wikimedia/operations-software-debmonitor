@@ -1,0 +1,35 @@
+DebMonitor - Debian packages tracker
+------------------------------------
+
+DebMonitor is a Django-based web application that allows to track Debian packages installed across a fleet of hosts,
+along with their pending software/security updates.
+
+It provides also a standalone command line script (CLI) that, when distributed in the target hosts, allows to
+automatically update DebMonitor's database using APT and DPKG hooks.
+
+
+Target configuration
+^^^^^^^^^^^^^^^^^^^^
+
+To automate the tracking of the packages in the target hosts, follow these steps:
+
+* deploy the standlone CLI script provided in ``utils/cli.py`` across the fleet, for example into
+  ``/usr/local/bin/debmonitor``, and make it executable.
+* Add a configuration file in ``/etc/apt/apt.conf.d/`` with the following content, replacing ``##DEMBONITOR_SERVER##``
+  with the domain name at which the DebMonitor server is reachable.
+
+  .. code-block:: none
+
+    # Tell dpkg to use version 3 of the protocol for the Pre-Install-Pkgs hook (version 2 is also supported)
+    Dpkg::Tools::options::/usr/local/bin/debmonitor::Version "3";
+    # Set the dpkg hook to call DebMonitor for any change with the -g/--dpkg option to read the changes from stdin
+    Dpkg::Pre-Install-Pkgs {"/usr/local/bin/debmonitor -s ##DEMBONITOR_SERVER## -g || true";};
+    # Set the APT update hook to call DebMonitor with the -u/upgradable option to send only the pending upgrades
+    APT::Update::Post-Invoke {"/usr/local/bin/debmonitor -s ##DEMBONITOR_SERVER## -u || true"};
+
+* Set a daily or weekly crontab that executes DebMonitor to send the list of all installed and upgradable packages
+  (do not set the ``-g`` or ``-u`` options).
+  It is used as a reconciliation method if any of the hook would fail. It is also required to run DebMonitor in full
+  mode at least once to track all the packages.
+
+See all the available options of the CLI with the ``-h/--help`` option.

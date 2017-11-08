@@ -1,0 +1,11 @@
+{% extends "../base_table.html" %}
+
+{% block table_body %}
+{% for host in hosts %}
+<tr>
+  <td>
+    <a href="{% url 'hosts:detail' host.name %}">{{ host.name }}</a>
+  </td>
+</tr>
+{% endfor %}
+{% endblock %}

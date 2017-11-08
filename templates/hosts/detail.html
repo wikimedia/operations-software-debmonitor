@@ -1,0 +1,34 @@
+{% extends "../base_table.html" %}
+
+{% block summary %}
+<dl class="row">
+  <dt class="col-sm-3">Running kernel</dt>
+  <dd class="col-sm-9"><a href="{% url 'kernels:detail' host.running_kernel_slug %}">{{ host.running_kernel }}</a></dd>
+  <dt class="col-sm-3">OS</dt>
+  <dd class="col-sm-9">{{ host.os.name }}</dd>
+  <dt class="col-sm-3">Last update</dt>
+  <dd class="col-sm-9"><span data-toggle="tooltip" title="{{ host.modified|date:"r" }}">{{ host.modified|timesince }} ago</span></dd>
+</dl>
+{% endblock %}
+
+{% block table_body %}
+{% for package in host_packages %}
+<tr>
+  <td>
+    <a href="{% url 'bin_packages:detail' package.package.name %}">{{ package.package.name }}</a>
+  </td>
+  <td>{{ package.package_version.version }}</td>
+  <td>
+    {% if package.upgradable_version.version %}
+    {{ package.upgradable_version.version }}
+      {% if package.upgrade_type == security_upgrade %}
+      <span class="badge badge-danger align-text-bottom">security</span>
+      {% else %}
+      <span class="badge badge-warning align-text-bottom">upgrade</span>
+      {% endif %}
+    {% endif %}
+  </td>
+  <td>{% if package.upgrade_type %}{{ package.upgrade_type }}{% endif %}</td>
+</tr>
+{% endfor %}
+{% endblock %}

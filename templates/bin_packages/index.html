@@ -1,0 +1,24 @@
+{% extends "../base_table.html" %}
+{% load bin_package_extras %}
+
+{% block table_body %}
+{% for package in packages %}
+<tr>
+  <td>
+    <div class="row">
+      <div class="col-md-8"><a href="{% url 'bin_packages:detail' package.name %}">{{ package.name }}</a></div>
+      <div class="col-md-4">
+        {% if package.hosts_count %}<span class="badge badge-primary align-text-bottom" data-toggle="tooltip" data-trigger="hover" data-delay='{"show": 800, "hide": 50}' title="{{ table_headers.0.badges.0.tooltip }}" aria-pressed="true">{{ package.hosts_count }}</span>{% endif %}
+        {% if package.upgrades_count %}<span class="badge badge-warning align-text-bottom" data-toggle="tooltip" data-trigger="hover" data-delay='{"show": 800, "hide": 50}' title="{{ table_headers.0.badges.1.tooltip }}" aria-pressed="true">{{ package.upgrades_count }}</span>{% endif %}
+        {% if security_upgrades|dict_get:package.id %}<span class="badge badge-danger align-text-bottom" data-toggle="tooltip" data-trigger="hover" data-delay='{"show": 800, "hide": 50}' title="{{ table_headers.0.badges.2.tooltip }}" aria-pressed="true">{{ security_upgrades|dict_get:package.id }}</span>{% endif %}
+      </div>
+    </div>
+  </td>
+  <td>{{ package.versions_count }}</td>
+  <td>{{ package.os_list }}</td>
+  <td>{{ package.hosts_count }}</td>
+  <td>{{ package.upgrades_count }}</td>
+  <td>{% if security_upgrades|dict_get:package.id %}{{ security_upgrades|dict_get:package.id }}{% else %}0{% endif %}</td>
+</tr>
+{% endfor %}
+{% endblock %}

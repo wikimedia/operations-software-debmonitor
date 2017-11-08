@@ -1,0 +1,13 @@
+/.cache/
+/.coverage
+/.eggs/
+/.pytest_cache/
+/.tox/
+/.venv/
+/build/
+/dist/
+/*.egg-info/
+__pycache__/
+/db.sqlite3
+/config.json
+*.pyc
