@@ -21,6 +21,7 @@ extras_require = {
         'pytest>=3.5.0',
         'pytest-cov>=2.5.1',
         'pytest-django>=3.1.2',
+        'requests-mock>=1.3.0',
     ],
 }
 
