@@ -9,5 +9,30 @@
         "DB_HOST": "localhost",
         "DB_PORT": 3306
     },
-    "LOG_DB_QUERIES": false
+    "LOG_DB_QUERIES": false,
+    "REQUIRE_LOGIN": true,
+    "LDAP": {
+        "SERVER_URI": "ldaps://ldap.example.com",
+        "BIND_DN": "cn=bindagent,ou=profile,dc=example,dc=com",
+        "BIND_PASSWORD": "password for the bind object",
+        "USER_SEARCH": {
+            "USER_FIELD": "uid",
+            "SEARCH": "ou=people,dc=example,dc=com"
+        },
+        "GROUP_SEARCH": "dc=example,dc=com",
+        "REQUIRE_GROUP": "cn=staff,ou=groups,dc=example,dc=com",
+        "CACHE_GROUPS": true,
+        "GROUP_CACHE_TIMEOUT": 900,
+        "FIND_GROUP_PERMS": true,
+        "USER_ATTR_MAP": {
+            "username": "cn",
+            "email": "mail"
+        },
+        "USER_FLAGS_BY_GROUP": {
+            "is_active": "cn=staff,ou=groups,dc=example,dc=com",
+            "is_staff": "cn=staff,ou=groups,dc=example,dc=com",
+            "is_superuser": "cn=admin,ou=groups,dc=example,dc=com"
+        }
+    }
+
 }

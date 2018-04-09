@@ -43,6 +43,29 @@
           <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
           <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
         </form>
+
+        {% if user.is_authenticated %}
+        <div class="btn-group ml-2">
+          <button class="btn btn-light dropdown-toggle" type="button" id="dropdownUserMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <img src="{% static "icons/person.svg" %}" width="15" height="15" class="d-inline-block" alt="User Menu">
+          </button>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownUserMenuButton">
+            <h6 class="dropdown-header">{{ user.username }}</h6>
+            <div class="dropdown-divider"></div>
+            {% if user.is_superuser %}
+            <a class="dropdown-item" href="{% url 'admin:index' %}">
+              <img src="{% static "icons/cog.svg" %}" width="15" height="15" class="d-inline-block" alt="">
+              Admin panel
+            </a>
+            {% endif %}
+            <a class="dropdown-item" href="{% url 'logout' %}">
+              <img src="{% static "icons/account-logout.svg" %}" width="15" height="15" class="d-inline-block" alt="">
+              Log out
+            </a>
+          </div>
+        </div>
+        {% endif %}
+
       </div>
     </nav>
 

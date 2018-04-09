@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_safe, require_POST
+from stronghold.decorators import public
 
 from bin_packages.models import PackageVersion
 from hosts.models import Host, HostPackage, SECURITY_UPGRADE
@@ -136,6 +137,7 @@ def kernel_detail(request, slug):
 
 @csrf_exempt
 @require_POST
+@public
 def update(request, name):
     """Update a host and all it's related information from a JSON."""
     if not request.body:

@@ -1,0 +1,18 @@
+{% extends "./base.html" %}
+
+{% block content %}
+<div class="col-md-4 pl-0">
+  <form method="post" id="login_form">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Log in</button>
+  </form>
+</div>
+{% endblock %}
+
+{% block bottom_script %}
+$("#login_form p").addClass("form-group font-weight-bold");
+$("#login_form input").addClass("form-control");
+$("#login_form ul").addClass("p-0");
+$("#login_form li").addClass("bg-danger text-white p-3");
+{% endblock %}
