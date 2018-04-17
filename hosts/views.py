@@ -2,6 +2,7 @@ import json
 import logging
 
 from django import http
+from django.conf import settings
 from django.db.models import BooleanField, Case, Count, When
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
@@ -10,6 +11,7 @@ from django.views.decorators.http import require_safe, require_POST
 from stronghold.decorators import public
 
 from bin_packages.models import PackageVersion
+from hosts import is_valid_cn
 from hosts.models import Host, HostPackage, SECURITY_UPGRADE
 from src_packages.models import OS
 
@@ -20,6 +22,16 @@ except AttributeError:  # pragma: no cover, compatibility with Python 3.4
     JSONDecodeError = ValueError
 
 logger = logging.getLogger(__name__)
+
+# String to use to check if the web server has verified the client certificate.
+# Nginx sets the $ssl_client_verify variable to NONE, SUCCESS, FAILED:reason.
+# Apache sets the environmental variable SSL_CLIENT_VERIFY to NONE, SUCCESS, GENEROUS or FAILED:reason.
+SSL_CLIENT_VERIFY_SUCCESS = 'SUCCESS'
+# HTTP header that holds the client's certificate validation result as reported by the web server.
+SSL_CLIENT_VERIFY_HEADER = 'HTTP_X_CLIENT_CERT_VERIFY'
+# HTTP header that holds the client's certificate DN as reported by the web browser
+# (i.e. $ssl_client_s_dn for Nginx and SSL_CLIENT_S_DN for Apache).
+SSL_CLIENT_SUBJECT_DN_HEADER = 'HTTP_X_CLIENT_CERT_SUBJECT_DN'
 
 
 @require_safe
@@ -152,6 +164,17 @@ def update(request, name):
     if name != payload.get('hostname', ''):
         return http.HttpResponseBadRequest("URL host '{name}' and POST payload hostname '{host}' do not match".format(
             name=name, host=payload.get('hostname', '')))
+
+    if settings.DEBMONITOR_VERIFY_CLIENTS:
+        ssl_verify = request.META.get(SSL_CLIENT_VERIFY_HEADER, '')
+        if ssl_verify != SSL_CLIENT_VERIFY_SUCCESS:
+            return http.HttpResponseForbidden('Client certificate validation failed: {message}'.format(
+                message=ssl_verify))
+
+        ssl_dn = request.META.get(SSL_CLIENT_SUBJECT_DN_HEADER, '')
+        if not is_valid_cn(ssl_dn, name):
+            return http.HttpResponseForbidden("Unauthorized to update host '{name}' with certificate '{dn}'".format(
+                name=name, dn=ssl_dn))
 
     try:
         os = OS.objects.get(name=payload['os'])

@@ -11,6 +11,8 @@
     },
     "LOG_DB_QUERIES": false,
     "REQUIRE_LOGIN": true,
+    "VERIFY_CLIENTS": true,
+    "PROXY_HOSTS": ["host1.example.com"],
     "LDAP": {
         "SERVER_URI": "ldaps://ldap.example.com",
         "BIND_DN": "cn=bindagent,ou=profile,dc=example,dc=com",

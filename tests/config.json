@@ -1,0 +1,5 @@
+{
+    "LOG_DB_QUERIES": true,
+    "REQUIRE_LOGIN": false,
+    "VERIFY_CLIENTS": false
+}

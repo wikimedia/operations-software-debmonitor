@@ -158,6 +158,48 @@ def test_update_status_code_wrong_hostname(client):
     assert response.status_code == 400
 
 
+def test_update_status_code_missing_cert(client, settings):
+    """Trying to update an host with a missing certificate should return 403 Forbidden."""
+    settings.DEBMONITOR_VERIFY_CLIENTS = True
+    response = client.generic('POST', EXISTING_HOST_UPDATE_URL, PAYLOAD_EXISTING_NO_UPDATE)
+    assert response.status_code == 403
+
+
+def test_update_status_code_invalid_cert(client, settings):
+    """Trying to update an host with an invalid wrong should return 403 Forbidden."""
+    settings.DEBMONITOR_VERIFY_CLIENTS = True
+    extra = {views.SSL_CLIENT_VERIFY_HEADER: 'FAILED:reason'}
+    response = client.generic('POST', EXISTING_HOST_UPDATE_URL, PAYLOAD_EXISTING_NO_UPDATE, **extra)
+    assert response.status_code == 403
+
+
+def test_update_status_code_wrong_cert(client, settings):
+    """Trying to update an host with a valid wrong certificate should return 403 Forbidden."""
+    settings.DEBMONITOR_VERIFY_CLIENTS = True
+    extra = {views.SSL_CLIENT_VERIFY_HEADER: 'SUCCESS', views.SSL_CLIENT_SUBJECT_DN_HEADER: 'CN=host2.example.com'}
+    response = client.generic('POST', EXISTING_HOST_UPDATE_URL, PAYLOAD_EXISTING_NO_UPDATE, **extra)
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_update_status_code_cert_ok(client, settings):
+    """Trying to update an host with a valid certificate for the correct host should return 201 Created."""
+    settings.DEBMONITOR_VERIFY_CLIENTS = True
+    extra = {views.SSL_CLIENT_VERIFY_HEADER: 'SUCCESS', views.SSL_CLIENT_SUBJECT_DN_HEADER: 'CN=host1.example.com'}
+    response = client.generic('POST', EXISTING_HOST_UPDATE_URL, PAYLOAD_EXISTING_NO_UPDATE, **extra)
+    assert response.status_code == 201
+
+
+@pytest.mark.django_db
+def test_update_status_code_proxy_host(client, settings):
+    """Trying to update an host with a valid certificate from an allowed proxy host should return 201 Created."""
+    settings.DEBMONITOR_VERIFY_CLIENTS = True
+    settings.DEBMONITOR_PROXY_HOSTS = ['host2.example.com']
+    extra = {views.SSL_CLIENT_VERIFY_HEADER: 'SUCCESS', views.SSL_CLIENT_SUBJECT_DN_HEADER: 'CN=host2.example.com'}
+    response = client.generic('POST', EXISTING_HOST_UPDATE_URL, PAYLOAD_EXISTING_NO_UPDATE, **extra)
+    assert response.status_code == 201
+
+
 @pytest.mark.django_db
 def test_update_status_code_invalid_os(client):
     """Trying to update an host with a payload with an invalid OS should return 400 Bad Request."""
