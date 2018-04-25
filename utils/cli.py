@@ -32,7 +32,8 @@ This script was tested with Python 2.7, 3.5, 3.6.
   * python-requests
 
 * Deploy this standalone CLI script across the fleet, for example into ``/usr/local/bin/debmonitor``, and make it
-  executable, optionally modifying the shebang to force a specific Python version.
+  executable, optionally modifying the shebang to force a specific Python version. The script can also be downloaded
+  directly from a DebMonitor server via its '/client' endpoint.
 * Add a configuration file in ``/etc/apt/apt.conf.d/`` with the following content, replacing ``##DEMBONITOR_SERVER##``
   with the domain name at which the DebMonitor server is reachable.
 
@@ -47,14 +48,18 @@ This script was tested with Python 2.7, 3.5, 3.6.
 
 * Set a daily or weekly crontab that executes DebMonitor to send the list of all installed and upgradable packages
   (do not set the ``-g`` or ``-u`` options). It is used as a reconciliation method if any of the hook would fail.
-  It is also required to run DebMonitor in full mode at least once to track all the packages.
+  It is also required to run DebMonitor in full mode at least once to track all the packages. Optionally set the
+  --update option so that the script will automatically check for available updates and will overwrite itself with the
+  latest version available on the DebMonitor server.
 
 """
 from __future__ import print_function
 
 import argparse
+import hashlib
 import json
 import logging
+import os
 import platform
 import socket
 import sys
@@ -65,8 +70,10 @@ import apt
 import requests
 
 
-__version__ = '1.0.0'
+__version__ = '1.1.0'
 
+CLIENT_VERSION_HEADER = 'X-Debmonitor-Client-Version'
+CLIENT_CHECKSUM_HEADER = 'X-Debmonitor-Client-Checksum'
 logger = logging.getLogger('debmonitor')
 AptLineV2 = namedtuple('LineV2', ['name', 'version_from', 'direction', 'version_to', 'action'])
 AptLineV3 = namedtuple('LineV3', ['name', 'version_from', 'arch_from', 'multiarch_from', 'direction', 'version_to',
@@ -265,6 +272,50 @@ def parse_apt_line(update_line, cache, version=3):
     return group, package
 
 
+def self_update(base_url, cert):
+    """Check if the DebMonitor server has a different version of this script and automatically self-overwrite it.
+
+    Arguments:
+        base_url (str): the base URL of the DebMonitor server.
+        cert (str, tuple, None): a client certificate as required by the requests library.
+
+    Raises:
+        requests.exceptions.RequestException: on error to check the version and get the new script.
+        EnvironmentError: if unable to overwrite itself.
+        RuntimeError: if no remote version is found or there is a checksum mismatch or a wrong HTTP status code.
+    """
+    client_url = '{base_url}/client'.format(base_url=base_url)
+    response = requests.head(client_url, cert=cert)
+    if response.status_code != requests.status_codes.codes.ok:
+        raise RuntimeError('Unable to check remote script version, got HTTP {retcode}, expected 200 OK.'.format(
+            retcode=response.status_code))
+
+    version = response.headers.get(CLIENT_VERSION_HEADER)
+    if version is None:
+        raise RuntimeError('No header {header} value found, unable to check remote version of the script.'.format(
+            header=CLIENT_VERSION_HEADER))
+
+    if version == __version__:
+        logger.debug('The current script version is the correct one, no update needed.')
+        return
+
+    logger.info('Found new remote version %s, current version is %s. Updating.', version, __version__)
+    response = requests.get(client_url, cert=cert)
+    if response.status_code != requests.status_codes.codes.ok:
+        raise RuntimeError('Unable to download remote script, got HTTP {retcode}, expected 200 OK.'.format(
+            retcode=response.status_code))
+
+    checksum = hashlib.md5(response.content).hexdigest()
+    if response.headers.get(CLIENT_CHECKSUM_HEADER) != checksum:
+        raise RuntimeError('The checksum of the script do not match the HTTP header: {checksum} != {header}'.format(
+            checksum=checksum, header=response.headers.get(CLIENT_CHECKSUM_HEADER)))
+
+    with open(os.path.realpath(__file__), mode='w') as script_file:
+        script_file.write(response.text)
+
+    logger.info('Successfully self-updated DebMonitor CLI to version %s', version)
+
+
 def parse_args(argv):
     """Parse command line arguments.
 
@@ -297,6 +348,9 @@ def parse_args(argv):
                               'format for version 3 and 2.'))
     parser.add_argument('-n', '--dry-run', action='store_true',
                         help='Do not send the report to DebMonitor server and print it to stdout.')
+    parser.add_argument('--update', action="store_true",
+                        help=('Self-update DebMonitor CLI script if there is a new version available on the '
+                              'DebMonitor server. The script will execute with the current version.'))
     parser.add_argument('-d', '--debug', action="store_true", help='Set logging level to DEBUG')
     parser.add_argument('--version', action='version', version='%(prog)s {version}'.format(version=__version__))
     args = parser.parse_args(argv)
@@ -356,7 +410,8 @@ def run(args, input_lines=None):
         print(json.dumps(payload, sort_keys=True, indent=4))
         return
 
-    url = 'https://{server}:{port}/hosts/{host}/update'.format(server=args.server, port=args.port, host=hostname)
+    base_url = 'https://{server}:{port}'.format(server=args.server, port=args.port)
+    url = '{base_url}/hosts/{host}/update'.format(base_url=base_url, host=hostname)
 
     cert = None
     if args.key is not None:
@@ -369,6 +424,12 @@ def run(args, input_lines=None):
         raise RuntimeError('Failed to send the update to the DebMonitor server: {status} {body}'.format(
             status=response.status_code, body=response.text))
     logger.info('Successfully sent the %s update to the DebMonitor server', upgrade_type)
+
+    if args.update:
+        try:
+            self_update(base_url, cert)
+        except Exception as e:
+            logger.error('Unable to self-update this script: %s', e)
 
 
 def main(args, input_lines=None):

@@ -2,8 +2,7 @@ import uuid
 
 import pytest
 
-from django.urls import reverse
-from django.urls import resolve
+from django.urls import resolve, reverse
 
 from hosts import views
 

@@ -8,6 +8,7 @@ from debmonitor import views
 
 urlpatterns = [
     path('', views.index, name='index'),
+    path('client', views.client, name='client'),
     path('hosts/', include('hosts.urls')),
     path('kernels/', include('hosts.kernel_urls')),
     path('packages/', include('bin_packages.urls')),

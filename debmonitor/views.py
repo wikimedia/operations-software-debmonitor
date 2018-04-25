@@ -1,10 +1,20 @@
+import logging
+
 from django.db.models import Count, Max, Min
+from django.http import HttpResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_safe
+
+import debmonitor
 
 from bin_packages.models import Package, PackageVersion
 from hosts.models import Host, HostPackage, SECURITY_UPGRADE
 from src_packages.models import SrcPackage, SrcPackageVersion
+
+
+CLIENT_VERSION_HEADER = 'X-Debmonitor-Client-Version'
+CLIENT_CHECKSUM_HEADER = 'X-Debmonitor-Client-Checksum'
+logger = logging.getLogger(__name__)
 
 
 @require_safe
@@ -65,3 +75,21 @@ def index(request):
     }
 
     return render(request, 'index.html', args)
+
+
+@require_safe
+def client(request):
+    """Download the DebMonitor CLI script on GET, add custom headers with the version and checksum."""
+    version, checksum, body = debmonitor.get_client()
+
+    if request.method == 'HEAD':
+        response = HttpResponse()
+    elif request.method == 'GET':
+        response = HttpResponse(body, content_type='text/x-python')
+    else:  # pragma: no cover - this should never happen due to @require_safe
+        raise RuntimeError('Invalid method {method}'.format(method=request.method))
+
+    response[CLIENT_VERSION_HEADER] = version
+    response[CLIENT_CHECKSUM_HEADER] = checksum
+
+    return response

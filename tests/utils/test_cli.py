@@ -1,21 +1,22 @@
 import json
+import os
 import sys
 
 from collections import namedtuple
-from unittest import mock
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
 OS_NAME = 'ExampleOS'
 KERNEL_RELEASE = '1.0.0'
 KERNEL_VERSION = 'ExampleOS v1.0.0-1'
-mocked_apt = mock.MagicMock()
+mocked_apt = MagicMock()
 mocked_apt.cache.Filter = object
-mocked_platform = mock.MagicMock()
+mocked_platform = MagicMock()
 mocked_platform.linux_distribution().__getitem__().title.return_value = OS_NAME
 mocked_platform.release.return_value = KERNEL_RELEASE
 mocked_platform.version.return_value = KERNEL_VERSION
-with mock.patch.dict(sys.modules, {'apt': mocked_apt, 'platform': mocked_platform}):
+with patch.dict(sys.modules, {'apt': mocked_apt, 'platform': mocked_platform}):
     from utils import cli
 
 
@@ -23,7 +24,11 @@ AptPackage = namedtuple('AptPackage', ['name', 'is_installed', 'installed', 'can
 AptPkgVersion = namedtuple('AptPkgVersion', ['source_name', 'version'])
 HOSTNAME = 'host1.example.com'
 DEBMONITOR_SERVER = 'debmonitor.example.com'
-DEBMONITOR_URL = 'https://{server}:443/hosts/{hostname}/update'.format(server=DEBMONITOR_SERVER, hostname=HOSTNAME)
+DEBMONITOR_BASE_URL = 'https://{server}:443'.format(server=DEBMONITOR_SERVER)
+DEBMONITOR_UPDATE_URL = '{base_url}/hosts/{hostname}/update'.format(base_url=DEBMONITOR_BASE_URL, hostname=HOSTNAME)
+DEBMONITOR_CLIENT_URL = '{base_url}/client'.format(base_url=DEBMONITOR_BASE_URL)
+DEBMONITOR_CLIENT_VERSION = '0.0.1'
+DEBMONITOR_CLIENT_CHECKSUM = '8d777f385d3dfec8815d20f7496026dc'
 APT_HOOK_LINES = {
     2: [
         # Installed
@@ -186,7 +191,7 @@ def test_parse_apt_lines(params):
 def test_apt_filter_installed():
     """Calling AptInstalledFilter.apply() with an installed package should return True."""
     filter = cli.AptInstalledFilter()
-    package = mock.MagicMock()
+    package = MagicMock()
     package.is_installed = True
     assert filter.apply(package)
 
@@ -194,7 +199,7 @@ def test_apt_filter_installed():
 def test_apt_filter_not_installed():
     """Calling AptInstalledFilter.apply() with a not installed package should return False."""
     filter = cli.AptInstalledFilter()
-    package = mock.MagicMock()
+    package = MagicMock()
     package.is_installed = False
     assert filter.apply(package) is False
 
@@ -294,12 +299,86 @@ def test_parse_dpkg_hook(version, apt_line):
     assert packages == expected_packages
 
 
+def test_self_update_head_fail(mocked_requests):
+    """Calling self_update() when the HEAD request to DebMonitor fail should raise RuntimeError."""
+    mocked_requests.register_uri('HEAD', DEBMONITOR_CLIENT_URL, status_code=500)
+    with pytest.raises(RuntimeError, match='Unable to check remote script version'):
+        cli.self_update(DEBMONITOR_BASE_URL, None)
+
+    assert mocked_requests.called
+
+
+def test_self_update_head_no_header(mocked_requests):
+    """Calling self_update() when the HEAD request is missing the expected header should raise RuntimeError."""
+    mocked_requests.register_uri('HEAD', DEBMONITOR_CLIENT_URL, status_code=200)
+    with pytest.raises(RuntimeError, match='No header {header} value found'.format(header=cli.CLIENT_VERSION_HEADER)):
+        cli.self_update(DEBMONITOR_BASE_URL, None)
+
+    assert mocked_requests.called
+
+
+def test_self_update_head_same_version(mocked_requests):
+    """Calling self_update() when client on DebMonitor is at the same version should return without doing anything."""
+    mocked_requests.register_uri(
+        'HEAD', DEBMONITOR_CLIENT_URL, status_code=200, headers={cli.CLIENT_VERSION_HEADER: cli.__version__})
+
+    ret = cli.self_update(DEBMONITOR_BASE_URL, None)
+
+    assert ret is None
+    assert mocked_requests.called
+
+
+def test_self_update_has_update_fail(mocked_requests):
+    """Calling self_update() when the GET request to DebMonitor fail should raise RuntimeError."""
+    mocked_requests.register_uri(
+        'HEAD', DEBMONITOR_CLIENT_URL, status_code=200, headers={cli.CLIENT_VERSION_HEADER: DEBMONITOR_CLIENT_VERSION})
+    mocked_requests.register_uri('GET', DEBMONITOR_CLIENT_URL, status_code=500)
+
+    with pytest.raises(RuntimeError, match='Unable to download remote script'):
+        cli.self_update(DEBMONITOR_BASE_URL, None)
+
+    assert mocked_requests.called
+
+
+def test_self_update_has_update_wrong_hash(mocked_requests):
+    """Calling self_update() when the checksum mismatch should raise RuntimeError."""
+    mocked_requests.register_uri(
+        'HEAD', DEBMONITOR_CLIENT_URL, status_code=200, headers={cli.CLIENT_VERSION_HEADER: DEBMONITOR_CLIENT_VERSION})
+    mocked_requests.register_uri('GET', DEBMONITOR_CLIENT_URL, status_code=200, text='data',
+                                 headers={cli.CLIENT_VERSION_HEADER: DEBMONITOR_CLIENT_VERSION,
+                                          cli.CLIENT_CHECKSUM_HEADER: '000000'})
+
+    with pytest.raises(RuntimeError, match='The checksum of the script do not match the HTTP header'):
+        cli.self_update(DEBMONITOR_BASE_URL, None)
+
+    assert mocked_requests.called
+
+
+def test_self_update_has_update_ok(mocked_requests):
+    """Calling self_update() should self-update the CLI script."""
+    mocked_requests.register_uri(
+        'HEAD', DEBMONITOR_CLIENT_URL, status_code=200, headers={cli.CLIENT_VERSION_HEADER: DEBMONITOR_CLIENT_VERSION})
+    mocked_requests.register_uri(
+        'GET', DEBMONITOR_CLIENT_URL, status_code=200, text='data', headers={
+            cli.CLIENT_VERSION_HEADER: DEBMONITOR_CLIENT_VERSION,
+            cli.CLIENT_CHECKSUM_HEADER: DEBMONITOR_CLIENT_CHECKSUM})
+
+    with patch('builtins.open', mock_open()) as mocked_open:
+        cli.self_update(DEBMONITOR_BASE_URL, None)
+
+        mocked_open.assert_called_once_with(os.path.realpath(cli.__file__), mode='w')
+        mocked_handler = mocked_open()
+        mocked_handler.write.assert_called_once_with('data')
+
+    assert mocked_requests.called
+
+
 @pytest.mark.parametrize('params', ([], ['-u'], ['-k', 'cert.key', '-c', 'cert.pem'], ['-c', 'cert.pem']))
-@mock.patch('socket.getfqdn', return_value=HOSTNAME)
+@patch('socket.getfqdn', return_value=HOSTNAME)
 def test_main(mocked_getfqdn, params, mocked_requests):
     """Calling main() should send the updates to the DebMonitor server with the above parameters."""
     args = cli.parse_args(['-s', DEBMONITOR_SERVER] + params)
-    mocked_requests.register_uri('POST', DEBMONITOR_URL, status_code=201)
+    mocked_requests.register_uri('POST', DEBMONITOR_UPDATE_URL, status_code=201)
     _reset_apt_caches()
 
     exit_code = cli.main(args)
@@ -310,7 +389,7 @@ def test_main(mocked_getfqdn, params, mocked_requests):
     assert mocked_requests.last_request.json() == _get_payload_with_packages(params)
 
 
-@mock.patch('socket.getfqdn', return_value=HOSTNAME)
+@patch('socket.getfqdn', return_value=HOSTNAME)
 def test_main_no_packages(mocked_getfqdn):
     """Calling main() if there are no updates should success without sending any update to the DebMonitor server."""
     args = cli.parse_args(['-s', DEBMONITOR_SERVER])
@@ -322,7 +401,7 @@ def test_main_no_packages(mocked_getfqdn):
     assert exit_code == 0
 
 
-@mock.patch('socket.getfqdn', return_value=HOSTNAME)
+@patch('socket.getfqdn', return_value=HOSTNAME)
 def test_main_dry_run(mocked_getfqdn, capsys):
     """Calling main() with dry-run parameter should print the updates without sending them to the DebMonitor server."""
     args = cli.parse_args(['-s', DEBMONITOR_SERVER, '-n'])
@@ -337,11 +416,11 @@ def test_main_dry_run(mocked_getfqdn, capsys):
 
 
 @pytest.mark.parametrize('params', ([], ['-d']))
-@mock.patch('socket.getfqdn', return_value=HOSTNAME)
+@patch('socket.getfqdn', return_value=HOSTNAME)
 def test_main_wrong_http_code(mocked_getfqdn, params, mocked_requests, caplog):
     """Calling main() when the DebMonitor server returns a wrong HTTP code should return 1."""
     args = cli.parse_args(['-s', DEBMONITOR_SERVER] + params)
-    mocked_requests.register_uri('POST', DEBMONITOR_URL, status_code=400)
+    mocked_requests.register_uri('POST', DEBMONITOR_UPDATE_URL, status_code=400)
     _reset_apt_caches()
 
     exit_code = cli.main(args)
@@ -353,12 +432,12 @@ def test_main_wrong_http_code(mocked_getfqdn, params, mocked_requests, caplog):
     assert 'Failed to send the update to the DebMonitor server' in caplog.text
 
 
-@mock.patch('socket.getfqdn', return_value=HOSTNAME)
+@patch('socket.getfqdn', return_value=HOSTNAME)
 def test_main_dpkg_hook(mocked_getfqdn, mocked_requests):
     """Calling main() with -g should parse the input for a Dpkg::Pre-Install-Pkgs hook and send the update."""
     args = cli.parse_args(['-s', DEBMONITOR_SERVER, '-g'])
     input_lines = _get_dpkg_hook_preamble(3) + APT_HOOK_LINES[3][0:2]
-    mocked_requests.register_uri('POST', DEBMONITOR_URL, status_code=201)
+    mocked_requests.register_uri('POST', DEBMONITOR_UPDATE_URL, status_code=201)
     mocked_apt.cache.Cache().__getitem__.return_value = AptPackage(
         name='package-name', is_installed=False, installed=None,
         candidate=AptPkgVersion(source_name='package-name', version='1.0.0-1'))
@@ -369,6 +448,48 @@ def test_main_dpkg_hook(mocked_getfqdn, mocked_requests):
     assert mocked_requests.called
     assert exit_code == 0
     assert mocked_requests.last_request.json() == _get_payload_with_packages(['-g'])
+
+
+@patch('socket.getfqdn', return_value=HOSTNAME)
+def test_main_update_fail(mocked_getfqdn, mocked_requests, caplog):
+    """Calling main() whit --update that fails the update should log the error and continue."""
+    args = cli.parse_args(['-s', DEBMONITOR_SERVER, '--update'])
+    mocked_requests.register_uri('POST', DEBMONITOR_UPDATE_URL, status_code=201)
+    mocked_requests.register_uri('HEAD', DEBMONITOR_CLIENT_URL, status_code=500)
+    _reset_apt_caches()
+
+    exit_code = cli.main(args)
+
+    assert mocked_requests.called
+    mocked_getfqdn.assert_called_once_with()
+    assert exit_code == 0
+    assert 'Unable to self-update this script' in caplog.text
+
+
+@patch('socket.getfqdn', return_value=HOSTNAME)
+def test_main_update_ok(mocked_getfqdn, mocked_requests, caplog):
+    """Calling main() whit --update that succeed should update the CLI script."""
+    args = cli.parse_args(['-s', DEBMONITOR_SERVER, '--update'])
+    mocked_requests.register_uri('POST', DEBMONITOR_UPDATE_URL, status_code=201)
+    mocked_requests.register_uri(
+        'HEAD', DEBMONITOR_CLIENT_URL, status_code=200, headers={cli.CLIENT_VERSION_HEADER: DEBMONITOR_CLIENT_VERSION})
+    mocked_requests.register_uri(
+        'GET', DEBMONITOR_CLIENT_URL, status_code=200, text='data', headers={
+            cli.CLIENT_VERSION_HEADER: DEBMONITOR_CLIENT_VERSION,
+            cli.CLIENT_CHECKSUM_HEADER: DEBMONITOR_CLIENT_CHECKSUM})
+    _reset_apt_caches()
+
+    with patch('builtins.open', mock_open()) as mocked_open:
+        exit_code = cli.main(args)
+
+        mocked_open.assert_called_once_with(os.path.realpath(cli.__file__), mode='w')
+        mocked_handler = mocked_open()
+        mocked_handler.write.assert_called_once_with('data')
+
+    assert mocked_requests.called
+    mocked_getfqdn.assert_called_once_with()
+    assert exit_code == 0
+    assert 'Successfully self-updated DebMonitor CLI' in caplog.text
 
 
 def _get_payload_with_packages(params):
