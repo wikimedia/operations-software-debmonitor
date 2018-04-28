@@ -184,8 +184,9 @@ def update(request, name):
     try:
         _update_v1(request, name, os, payload)
     except (KeyError, TypeError) as e:
-        logger.exception("Unable to update host '{host}'".format(host=name))
-        return http.HttpResponseBadRequest("Unable to update host '{host}': {e}".format(host=name, e=e))
+        message = "Unable to update host '{host}'".format(host=name)
+        logger.exception(message)
+        return http.HttpResponseBadRequest('{message}: {e}'.format(message=message, e=e))
     else:
         return http.HttpResponse(status=201)
 
@@ -200,13 +201,14 @@ def _update_v1(request, name, os, payload):
         host.os = os
         host.running_kernel = running_kernel
         host.save()  # Always update at least the modification time
+        host_packages = {host_pkg.package.name: host_pkg for host_pkg in HostPackage.objects.filter(host=host)}
 
     except Host.DoesNotExist:
         host = Host(name=name, os=os, running_kernel=running_kernel)
         host.save()
+        host_packages = {}
         logger.info("Created Host '%s'", name)
 
-    host_packages = {host_package.package.name: host_package for host_package in HostPackage.objects.filter(host=host)}
     existing_not_updated = []
 
     installed = payload.get('installed', [])

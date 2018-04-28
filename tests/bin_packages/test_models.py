@@ -2,6 +2,8 @@ import uuid
 
 import pytest
 
+from django.core.exceptions import ValidationError
+
 from bin_packages import models
 from src_packages.models import OS, SrcPackageVersion
 
@@ -33,3 +35,17 @@ def test_packageversion_get_or_create():
     assert created
     assert isinstance(package.package, models.Package)
     assert isinstance(package.src_package_version, SrcPackageVersion)
+
+
+def test_packageversion_clean():
+    """Calling save() with some invalida data should raise ValidationError."""
+    package_name = str(uuid.uuid4())
+    os1 = OS.objects.get(name='os1')
+    os2 = OS.objects.get(name='os2')
+    package, created = models.PackageVersion.objects.get_or_create(
+        name=package_name, version='1.2.3-1', source=package_name, os=os1)
+    assert created
+    package.os = os2
+
+    with pytest.raises(ValidationError, match='OS mismatch between'):
+        package.save()

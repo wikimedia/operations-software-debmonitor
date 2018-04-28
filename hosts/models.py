@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.text import slugify
 
@@ -102,3 +103,39 @@ class HostPackage(models.Model):
 
         return '{host}: {pkg} ({from_ver} -> {to_ver})'.format(
             host=self.host.name, pkg=self.package.name, from_ver=self.package_version.version, to_ver=to_ver)
+
+    def clean(self):
+        """Validate the model fields."""
+        package_errors = []
+        upgradable_errors = []
+
+        if self.package_version.os != self.host.os:
+            package_errors.append('OS mismatch between {bin} and {host} ({host_os})'.format(
+                bin=str(self.package_version), host=self.host.name, host_os=self.host.os))
+
+        if self.package_version.package != self.package:
+            package_errors.append('Package name mismatch between version of {ver} and {pkg}'.format(
+                ver=self.package_version.package.name, pkg=self.package.name))
+
+        if self.upgradable_version is not None and self.upgradable_version.os != self.host.os:
+            upgradable_errors.append('OS mismatch between {bin} and {host} ({host_os})'.format(
+                bin=str(self.upgradable_version), host=self.host.name, host_os=self.host.os))
+
+        if self.upgradable_version is not None and self.upgradable_version.package != self.upgradable_package:
+            upgradable_errors.append(
+                'Upgradable package name mismatch between version of {ver} and {pkg}'.format(
+                    ver=self.upgradable_version.package.name, pkg=self.upgradable_package.name))
+
+        errors = {}
+        if package_errors:
+            errors['package_version'] = '; '.join(package_errors)
+        if upgradable_errors:
+            errors['upgradable_version'] = '; '.join(upgradable_errors)
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        """Override parent save() to force validation."""
+        self.full_clean()
+        super().save(*args, **kwargs)

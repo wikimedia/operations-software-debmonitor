@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from debmonitor import SelectManager
@@ -68,3 +69,14 @@ class PackageVersion(models.Model):
     def __str__(self):
         """Model representation."""
         return '{name} {version} ({os})'.format(name=self.package.name, version=self.version, os=self.os.name)
+
+    def clean(self):
+        """Validate the model fields."""
+        if self.os != self.src_package_version.os:
+            raise ValidationError('OS mismatch between {src} and {bin}.'.format(
+                src=str(self.src_package_version), bin=str(self)))
+
+    def save(self, *args, **kwargs):
+        """Override parent save() to force validation."""
+        self.full_clean()
+        super().save(*args, **kwargs)

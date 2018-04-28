@@ -2,10 +2,12 @@ import uuid
 
 import pytest
 
+from django.core.exceptions import ValidationError
 from django.utils.text import slugify
 
+from bin_packages.models import Package
 from hosts import models
-
+from src_packages.models import OS
 
 pytestmark = pytest.mark.django_db
 
@@ -48,3 +50,43 @@ def test_host_save_kernel_slug():
 def test_disable_check_e003():
     """Ensure that Django check E003 for multiple ManyToManyField to the same model is disabled."""
     assert models.Host._check_m2m_through_same_relationship() == []
+
+
+def test_packageversion_wrong_pkg_os():
+    """Calling save() with a package version with a wrong OS should raise ValidationError."""
+    os2 = OS.objects.get(name='os2')
+    host_package = models.HostPackage.objects.get(host__name='host1.example.com', package__name='package3')
+    host_package.package_version.os = os2
+
+    with pytest.raises(ValidationError, match='OS mismatch between'):
+        host_package.save()
+
+
+def test_packageversion_wrong_upgrade_os():
+    """Calling save() with an upgradable package version with a wrong OS should raise ValidationError."""
+    os2 = OS.objects.get(name='os2')
+    host_package = models.HostPackage.objects.get(host__name='host1.example.com', package__name='package1')
+    host_package.upgradable_version.os = os2
+
+    with pytest.raises(ValidationError, match='OS mismatch between'):
+        host_package.save()
+
+
+def test_packageversion_wrong_pkg():
+    """Calling save() with a package version with a wrong package should raise ValidationError."""
+    package = Package.objects.get(name='package1')
+    host_package = models.HostPackage.objects.get(host__name='host1.example.com', package__name='package3')
+    host_package.package = package
+
+    with pytest.raises(ValidationError, match='Package name mismatch'):
+        host_package.save()
+
+
+def test_packageversion_wrong_upgrade():
+    """Calling save() with an upgradable package version with a wrong package should raise ValidationError."""
+    package = Package.objects.get(name='package3')
+    host_package = models.HostPackage.objects.get(host__name='host1.example.com', package__name='package1')
+    host_package.upgradable_package = package
+
+    with pytest.raises(ValidationError, match='Upgradable package name mismatch'):
+        host_package.save()

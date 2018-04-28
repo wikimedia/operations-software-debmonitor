@@ -662,6 +662,13 @@
         }
     },
     {
+        "model": "src_packages.os",
+        "pk": 2,
+        "fields": {
+            "name": "os2"
+        }
+    },
+    {
         "model": "src_packages.srcpackage",
         "pk": 1,
         "fields": {
