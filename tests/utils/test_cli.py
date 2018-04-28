@@ -12,11 +12,12 @@ KERNEL_RELEASE = '1.0.0'
 KERNEL_VERSION = 'ExampleOS v1.0.0-1'
 mocked_apt = MagicMock()
 mocked_apt.cache.Filter = object
+mocked_lsb = MagicMock()
+mocked_lsb.get_distro_information().get.return_value = OS_NAME
 mocked_platform = MagicMock()
-mocked_platform.linux_distribution().__getitem__().title.return_value = OS_NAME
 mocked_platform.release.return_value = KERNEL_RELEASE
 mocked_platform.version.return_value = KERNEL_VERSION
-with patch.dict(sys.modules, {'apt': mocked_apt, 'platform': mocked_platform}):
+with patch.dict(sys.modules, {'apt': mocked_apt, 'lsb_release': mocked_lsb, 'platform': mocked_platform}):
     from utils import cli
 
 

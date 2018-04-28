@@ -30,6 +30,7 @@ This script was tested with Python 2.7, 3.5, 3.6.
 
   * python-apt
   * python-requests
+  * lsb-release
 
 * Deploy this standalone CLI script across the fleet, for example into ``/usr/local/bin/debmonitor``, and make it
   executable, optionally modifying the shebang to force a specific Python version. The script can also be downloaded
@@ -67,6 +68,7 @@ import sys
 from collections import namedtuple
 
 import apt
+import lsb_release
 import requests
 
 
@@ -394,7 +396,7 @@ def run(args, input_lines=None):
 
     payload = {
         'api_version': args.api,
-        'os': platform.linux_distribution()[0].title(),
+        'os': lsb_release.get_distro_information().get('ID', 'unknown'),
         'hostname': hostname,
         'running_kernel': {
             'release': platform.release(),
