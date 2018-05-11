@@ -63,7 +63,7 @@ setup(
     license='GPLv3+',
     long_description=long_description,
     name='debmonitor',
-    packages=find_packages(exclude=['*.tests', '*.tests.*']),
+    packages=find_packages(exclude=['*.tests', '*.tests.*', 'tests.*']),
     platforms=['GNU/Linux', 'MacOSX'],
     setup_requires=setup_requires,
     url='https://github.com/wikimedia/debmonitor',
