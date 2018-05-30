@@ -93,6 +93,7 @@ if DEBMONITOR_CONFIG.get('MYSQL', {}):
             'PASSWORD': DEBMONITOR_CONFIG['MYSQL']['DB_PASSWORD'],
             'HOST': DEBMONITOR_CONFIG['MYSQL']['DB_HOST'],
             'PORT': DEBMONITOR_CONFIG['MYSQL']['DB_PORT'],
+            'OPTIONS': DEBMONITOR_CONFIG['MYSQL']['OPTIONS'],
         },
     }
 else:
