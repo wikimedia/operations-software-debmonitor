@@ -18,9 +18,9 @@ class Migration(migrations.Migration):
             name='Host',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(help_text='Hostname.', max_length=255, unique=True)),
-                ('running_kernel', models.CharField(help_text='Running kernel version.', max_length=255)),
-                ('running_kernel_slug', models.SlugField(help_text='Running kernel version URL slug.', max_length=255)),
+                ('name', models.CharField(help_text='Hostname.', max_length=190, unique=True)),
+                ('running_kernel', models.CharField(help_text='Running kernel version.', max_length=190)),
+                ('running_kernel_slug', models.SlugField(help_text='Running kernel version URL slug.', max_length=190)),
                 ('created', models.DateTimeField(
                     auto_now_add=True, help_text='Datetime of the creation of this object.')),
                 ('modified', models.DateTimeField(
@@ -40,7 +40,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('upgrade_type', models.CharField(
-                    blank=True, help_text='Upgrade type (security)', max_length=255, null=True)),
+                    blank=True, help_text='Upgrade type (security)', max_length=190, null=True)),
                 ('created', models.DateTimeField(
                     auto_now_add=True, help_text='Datetime of the creation of this object.')),
                 ('modified', models.DateTimeField(

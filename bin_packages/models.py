@@ -8,7 +8,7 @@ from src_packages.models import OS, SrcPackageVersion
 class Package(models.Model):
     """Binary package model."""
 
-    name = models.CharField(max_length=255, unique=True, help_text='Binary package name.')
+    name = models.CharField(max_length=190, unique=True, help_text='Binary package name.')
 
     class Meta:
         """Additional metadata."""
@@ -46,7 +46,7 @@ class PackageVersion(models.Model):
 
     package = models.ForeignKey(Package, on_delete=models.PROTECT, db_index=False, related_name='versions',
                                 help_text='Binary package.')
-    version = models.CharField(max_length=255, help_text='Binary package version.')
+    version = models.CharField(max_length=190, help_text='Binary package version.')
     os = models.ForeignKey(OS, on_delete=models.PROTECT, db_index=False, related_name='+',
                            verbose_name='operating system', help_text='Operating system.')
     src_package_version = models.ForeignKey(

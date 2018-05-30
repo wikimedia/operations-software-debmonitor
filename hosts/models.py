@@ -14,11 +14,11 @@ class Host(models.Model):
     """Host model."""
 
     # TODO: validate hostname according to RFCs 1035, 1123 and 2181. See also RFC 3696
-    name = models.CharField(max_length=255, unique=True, help_text='Hostname.')
+    name = models.CharField(max_length=190, unique=True, help_text='Hostname.')
     os = models.ForeignKey(OS, on_delete=models.PROTECT, related_name='+', verbose_name='operating system',
                            help_text='Operating system.')
-    running_kernel = models.CharField(max_length=255, help_text='Running kernel version.')
-    running_kernel_slug = models.SlugField(max_length=255, help_text='Running kernel version URL slug.')
+    running_kernel = models.CharField(max_length=190, help_text='Running kernel version.')
+    running_kernel_slug = models.SlugField(max_length=190, help_text='Running kernel version URL slug.')
     packages = models.ManyToManyField(
         Package, related_name='+', through='HostPackage', through_fields=('host', 'package'),
         db_index=True, blank=True, verbose_name='binary packages', help_text='Binary packages installed on this host.')
@@ -77,7 +77,7 @@ class HostPackage(models.Model):
     upgradable_version = models.ForeignKey(
         PackageVersion, db_index=True, on_delete=models.PROTECT, related_name='upgradable_hosts', blank=True, null=True,
         verbose_name='upgradable binary package version', help_text='Upgradable binary package version.')
-    upgrade_type = models.CharField(max_length=255, blank=True, null=True, help_text='Upgrade type (security)')
+    upgrade_type = models.CharField(max_length=190, blank=True, null=True, help_text='Upgrade type (security)')
 
     created = models.DateTimeField(auto_now_add=True, help_text='Datetime of the creation of this object.')
     modified = models.DateTimeField(auto_now=True, help_text='Datetime of the last modification of this object.')

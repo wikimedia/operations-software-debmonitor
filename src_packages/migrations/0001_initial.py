@@ -27,7 +27,7 @@ class Migration(migrations.Migration):
             name='SrcPackage',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(help_text='Source package name.', max_length=255, unique=True)),
+                ('name', models.CharField(help_text='Source package name.', max_length=190, unique=True)),
             ],
             options={
                 'verbose_name': 'source package',
@@ -39,7 +39,7 @@ class Migration(migrations.Migration):
             name='SrcPackageVersion',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('version', models.CharField(help_text='Version.', max_length=255)),
+                ('version', models.CharField(help_text='Version.', max_length=190)),
                 ('created', models.DateTimeField(
                     auto_now_add=True, help_text='Datetime of the creation of this object.')),
                 ('modified', models.DateTimeField(
