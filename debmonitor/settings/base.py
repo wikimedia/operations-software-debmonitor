@@ -87,7 +87,7 @@ WSGI_APPLICATION = 'debmonitor.wsgi.application'
 if DEBMONITOR_CONFIG.get('MYSQL', {}):
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.mysql',
+            'ENGINE': 'debmonitor.mysql',
             'NAME': DEBMONITOR_CONFIG['MYSQL']['DB_NAME'],
             'USER': DEBMONITOR_CONFIG['MYSQL']['DB_USER'],
             'PASSWORD': DEBMONITOR_CONFIG['MYSQL']['DB_PASSWORD'],
