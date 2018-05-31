@@ -22,7 +22,7 @@ class OS(models.Model):
 class SrcPackage(models.Model):
     """Source package model."""
 
-    name = models.CharField(max_length=190, unique=True, help_text='Source package name.')
+    name = models.CharField(max_length=255, unique=True, help_text='Source package name.')
 
     class Meta:
         """Additional metadata."""
@@ -55,7 +55,7 @@ class SrcPackageVersion(models.Model):
 
     src_package = models.ForeignKey(SrcPackage, on_delete=models.PROTECT, db_index=False, related_name='versions',
                                     verbose_name='source package', help_text='Source package.')
-    version = models.CharField(max_length=190, help_text='Version.')
+    version = models.CharField(max_length=255, help_text='Version.')
     os = models.ForeignKey(OS, on_delete=models.PROTECT, db_index=False, related_name='+',
                            help_text='Operating system.')
 
