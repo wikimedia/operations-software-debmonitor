@@ -34,9 +34,12 @@ This script was tested with Python 2.7, 3.5, 3.6.
 
 * Deploy this standalone CLI script across the fleet, for example into ``/usr/local/bin/debmonitor``, and make it
   executable, optionally modifying the shebang to force a specific Python version. The script can also be downloaded
-  directly from a DebMonitor server via its '/client' endpoint.
-* Add a configuration file in ``/etc/apt/apt.conf.d/`` with the following content, replacing ``##DEMBONITOR_SERVER##``
-  with the domain name at which the DebMonitor server is reachable.
+  directly from a DebMonitor server via its ``/client`` endpoint.
+* Optionally add a configuration file in ``/etc/debmonitor.conf`` (or in a different one passing the
+  ``--config /path/to/config`` CLI argument) to avoid to pass the common options to the CLI. See the example file in
+  ``doc/examples/client.conf``.
+* Add a configuration file in ``/etc/apt/apt.conf.d/`` with the following content, assuming that the ``server`` option
+  was set in the configuration file.
 
   .. code-block:: none
 
@@ -50,8 +53,8 @@ This script was tested with Python 2.7, 3.5, 3.6.
 * Set a daily or weekly crontab that executes DebMonitor to send the list of all installed and upgradable packages
   (do not set the ``-g`` or ``-u`` options). It is used as a reconciliation method if any of the hook would fail.
   It is also required to run DebMonitor in full mode at least once to track all the packages. Optionally set the
-  --update option so that the script will automatically check for available updates and will overwrite itself with the
-  latest version available on the DebMonitor server.
+  ``--update`` option so that the script will automatically check for available updates and will overwrite itself with
+  the latest version available on the DebMonitor server.
 
 """
 from __future__ import print_function
@@ -67,6 +70,11 @@ import sys
 
 from collections import namedtuple
 
+try:
+    from configparser import ConfigParser, Error as ConfigParserError
+except ImportError:  # pragma: py3 no cover - Backward compatibility with Python 2.7
+    from ConfigParser import SafeConfigParser as ConfigParser, Error as ConfigParserError
+
 import apt
 import lsb_release
 import requests
@@ -74,6 +82,7 @@ import requests
 
 __version__ = '1.1.0'
 
+SUPPORTED_API_VERSIONS = ('v1',)
 CLIENT_VERSION_HEADER = 'X-Debmonitor-Client-Version'
 CLIENT_CHECKSUM_HEADER = 'X-Debmonitor-Client-Checksum'
 logger = logging.getLogger('debmonitor')
@@ -331,8 +340,27 @@ def parse_args(argv):
         SystemExit: if there are missing required parameters or an invalid combination of parameters is used.
 
     """
-    parser = argparse.ArgumentParser(prog='debmonitor', description='DebMonitor CLI - Debian packages tracker CLI',
-                                     epilog=__doc__)
+    conf_parser = argparse.ArgumentParser(add_help=False)
+    conf_parser.add_argument(
+        '--config', default='/etc/debmonitor.conf',
+        help=('Configuration file for the DebMonitor CLI script to provide default values without having to pass them '
+              'as CLI arguments. If not present, rely only on CLI arguments. CLI argument always override '
+              'configuration file values. [default: /etc/debmonitor.conf]'))
+
+    # Parse the configuration file only for now
+    args, remaining_argv = conf_parser.parse_known_args(argv)
+
+    # Read the configuration file, if any. ConfigParser doesn't fail if the file do not exists or is not readable.
+    config = ConfigParser()
+    try:
+        config.read(args.config)
+    except ConfigParserError as e:
+        conf_parser.error('Unable to parse configuration file {name}: {msg}'.format(name=args.config, msg=e))
+
+    # Add remaining CLI options
+    parser = argparse.ArgumentParser(
+        prog='debmonitor', description='DebMonitor CLI - Debian packages tracker CLI', epilog=__doc__,
+        parents=[conf_parser], formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('-s', '--server', help='DebMonitor server DNS name, required unless -n/--dry-run is set.')
     parser.add_argument('-p', '--port', default=443, type=int,
                         help='Port in which the DebMonitor server is listening. [default: 443]')
@@ -342,7 +370,8 @@ def parse_args(argv):
     parser.add_argument('-k', '--key',
                         help=('Path to the client SSH private key to use for sending the update. If not specified, '
                               'the private key is expected to be found in the certificate defined by -c/--cert.'))
-    parser.add_argument('-a', '--api', help='Version of the API to use. [default: v1]', default='v1')
+    parser.add_argument('-a', '--api', help='Version of the API to use. [default: v1]', default='v1',
+                        choices=SUPPORTED_API_VERSIONS)
     parser.add_argument('-u', '--upgradable', action='store_true',
                         help='Send only the list of upgradable packages. Can be used as a hook for apt-get update.')
     parser.add_argument('-g', '--dpkg-hook', action='store_true',
@@ -355,7 +384,9 @@ def parse_args(argv):
                               'DebMonitor server. The script will execute with the current version.'))
     parser.add_argument('-d', '--debug', action="store_true", help='Set logging level to DEBUG')
     parser.add_argument('--version', action='version', version='%(prog)s {version}'.format(version=__version__))
-    args = parser.parse_args(argv)
+    # Initialize the default values with those from the configuration file.
+    parser.set_defaults(config=args.config, **config.defaults())
+    args = parser.parse_args(remaining_argv)
 
     if not args.server and not args.dry_run:
         parser.error('argument -s/--server is required unless -n/--dry-run is set')

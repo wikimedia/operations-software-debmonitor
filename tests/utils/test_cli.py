@@ -37,6 +37,7 @@ DEBMONITOR_UPDATE_URL = '{base_url}/hosts/{hostname}/update'.format(base_url=DEB
 DEBMONITOR_CLIENT_URL = '{base_url}/client'.format(base_url=DEBMONITOR_BASE_URL)
 DEBMONITOR_CLIENT_VERSION = '0.0.1'
 DEBMONITOR_CLIENT_CHECKSUM = '8d777f385d3dfec8815d20f7496026dc'
+DEBMONITOR_CLIENT_CONFIG = 'tests/fixtures/client.{mode}.conf'
 APT_HOOK_LINES = {
     2: [
         # Installed
@@ -179,6 +180,36 @@ def test_parse_args_version(capsys):
         assert msg in err
     else:
         assert msg in out
+
+
+def test_parse_args_config():
+    """Calling parse_args with --config should initialize the values from the configuration file."""
+    config = DEBMONITOR_CLIENT_CONFIG.format(mode='ok')
+    args = cli.parse_args(['--config', config])
+    assert args.config == config
+    assert args.server == DEBMONITOR_SERVER
+    assert args.port == 8081
+    assert args.cert == 'CERT_PATH'
+    assert args.key == 'KEY_PATH'
+
+
+def test_parse_args_config_override():
+    """Calling parse_args with --config should allow to override the values with CLI arguments."""
+    config = DEBMONITOR_CLIENT_CONFIG.format(mode='ok')
+    cert = 'DUMMY_CERT'
+    key = 'DUMMY_KEY'
+    args = cli.parse_args(['--config', config, '-c', cert, '-k', key, '-p', '18081'])
+    assert args.cert == cert
+    assert args.key == key
+    assert args.port == 18081
+
+
+def test_parse_args_config_invalid(capsys):
+    """Calling parse_args with --config with an invalid file should raise SystemExit."""
+    with pytest.raises(SystemExit):
+        cli.parse_args(['--config', DEBMONITOR_CLIENT_CONFIG.format(mode='ko')])
+    _, err = capsys.readouterr()
+    assert 'Unable to parse configuration file' in err
 
 
 def test_parse_apt_line_wrong_version():
