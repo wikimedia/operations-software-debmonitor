@@ -18,7 +18,7 @@ extras_require = {
         'mysqlclient==1.3.12',
     ],
     'with-ldap': [  # With LDAP support
-        'django-auth-ldap==1.4.0',
+        'django-auth-ldap==1.6.1',
     ],
     'tests': [  # Test dependencies
         'flake8>=3.5.0',

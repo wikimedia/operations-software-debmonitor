@@ -27,7 +27,7 @@
         "GROUP_SEARCH": "dc=example,dc=com",
         "REQUIRE_GROUP": "cn=staff,ou=groups,dc=example,dc=com",
         "CACHE_GROUPS": true,
-        "GROUP_CACHE_TIMEOUT": 900,
+        "CACHE_TIMEOUT": 900,
         "FIND_GROUP_PERMS": true,
         "USER_ATTR_MAP": {
             "username": "cn",
