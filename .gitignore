@@ -8,6 +8,7 @@
 /dist/
 /*.egg-info/
 __pycache__/
+/.python-version
 /db.sqlite3
 /config.json
 *.pyc

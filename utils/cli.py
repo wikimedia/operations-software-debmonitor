@@ -342,7 +342,7 @@ def parse_args(argv):
     parser.add_argument('-k', '--key',
                         help=('Path to the client SSH private key to use for sending the update. If not specified, '
                               'the private key is expected to be found in the certificate defined by -c/--cert.'))
-    parser.add_argument('-a', '--api', help='Version of the API to use', default='v1')
+    parser.add_argument('-a', '--api', help='Version of the API to use. [default: v1]', default='v1')
     parser.add_argument('-u', '--upgradable', action='store_true',
                         help='Send only the list of upgradable packages. Can be used as a hook for apt-get update.')
     parser.add_argument('-g', '--dpkg-hook', action='store_true',
@@ -350,7 +350,7 @@ def parse_args(argv):
                               'format for version 3 and 2.'))
     parser.add_argument('-n', '--dry-run', action='store_true',
                         help='Do not send the report to DebMonitor server and print it to stdout.')
-    parser.add_argument('--update', action="store_true",
+    parser.add_argument('--update', action='store_true',
                         help=('Self-update DebMonitor CLI script if there is a new version available on the '
                               'DebMonitor server. The script will execute with the current version.'))
     parser.add_argument('-d', '--debug', action="store_true", help='Set logging level to DEBUG')

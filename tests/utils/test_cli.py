@@ -1,11 +1,18 @@
 import json
+import logging
 import os
 import sys
 
 from collections import namedtuple
-from unittest.mock import MagicMock, mock_open, patch
+try:  # Python3
+    from unittest.mock import MagicMock, mock_open, patch
+    BUILTINS = 'builtins'
+except ImportError:  # Python2
+    from mock import MagicMock, mock_open, patch
+    BUILTINS = '__builtin__'
 
 import pytest
+
 
 OS_NAME = 'ExampleOS'
 KERNEL_RELEASE = '1.0.0'
@@ -166,8 +173,12 @@ def test_parse_args_version(capsys):
     """Calling parse_args with --version should print the version and exit."""
     with pytest.raises(SystemExit):
         cli.parse_args(['--version'])
-    out, _ = capsys.readouterr()
-    assert 'debmonitor {ver}'.format(ver=cli.__version__) in out
+    out, err = capsys.readouterr()
+    msg = 'debmonitor {ver}'.format(ver=cli.__version__)
+    if sys.version_info.major == 2:
+        assert msg in err
+    else:
+        assert msg in out
 
 
 def test_parse_apt_line_wrong_version():
@@ -364,7 +375,7 @@ def test_self_update_has_update_ok(mocked_requests):
             cli.CLIENT_VERSION_HEADER: DEBMONITOR_CLIENT_VERSION,
             cli.CLIENT_CHECKSUM_HEADER: DEBMONITOR_CLIENT_CHECKSUM})
 
-    with patch('builtins.open', mock_open()) as mocked_open:
+    with patch('{mod}.open'.format(mod=BUILTINS), mock_open()) as mocked_open:
         cli.self_update(DEBMONITOR_BASE_URL, None)
 
         mocked_open.assert_called_once_with(os.path.realpath(cli.__file__), mode='w')
@@ -470,6 +481,7 @@ def test_main_update_fail(mocked_getfqdn, mocked_requests, caplog):
 @patch('socket.getfqdn', return_value=HOSTNAME)
 def test_main_update_ok(mocked_getfqdn, mocked_requests, caplog):
     """Calling main() whit --update that succeed should update the CLI script."""
+    caplog.set_level(logging.INFO)
     args = cli.parse_args(['-s', DEBMONITOR_SERVER, '--update'])
     mocked_requests.register_uri('POST', DEBMONITOR_UPDATE_URL, status_code=201)
     mocked_requests.register_uri(
@@ -480,7 +492,7 @@ def test_main_update_ok(mocked_getfqdn, mocked_requests, caplog):
             cli.CLIENT_CHECKSUM_HEADER: DEBMONITOR_CLIENT_CHECKSUM})
     _reset_apt_caches()
 
-    with patch('builtins.open', mock_open()) as mocked_open:
+    with patch('{mod}.open'.format(mod=BUILTINS), mock_open()) as mocked_open:
         exit_code = cli.main(args)
 
         mocked_open.assert_called_once_with(os.path.realpath(cli.__file__), mode='w')

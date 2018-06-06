@@ -18,7 +18,7 @@ from src_packages.models import OS
 
 try:
     JSONDecodeError = json.JSONDecodeError
-except AttributeError:  # pragma: no cover, compatibility with Python 3.4
+except AttributeError:  # pragma: notpy34 no cover - Backward compatibility with Python 3.4
     JSONDecodeError = ValueError
 
 logger = logging.getLogger(__name__)
