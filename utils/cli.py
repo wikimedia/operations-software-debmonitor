@@ -80,7 +80,7 @@ import lsb_release
 import requests
 
 
-__version__ = '1.1.0'
+__version__ = '1.2.0'
 
 SUPPORTED_API_VERSIONS = ('v1',)
 CLIENT_VERSION_HEADER = 'X-Debmonitor-Client-Version'
