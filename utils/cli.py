@@ -283,12 +283,14 @@ def parse_apt_line(update_line, cache, version=3):
     return group, package
 
 
-def self_update(base_url, cert):
+def self_update(base_url, cert, verify):
     """Check if the DebMonitor server has a different version of this script and automatically self-overwrite it.
 
     Arguments:
         base_url (str): the base URL of the DebMonitor server.
         cert (str, tuple, None): a client certificate as required by the requests library.
+        verify (bool, str): to be passed to requests calls for server side certificate validation. Either a boolean or
+            a string with the path to a CA bundle.
 
     Raises:
         requests.exceptions.RequestException: on error to check the version and get the new script.
@@ -296,7 +298,7 @@ def self_update(base_url, cert):
         RuntimeError: if no remote version is found or there is a checksum mismatch or a wrong HTTP status code.
     """
     client_url = '{base_url}/client'.format(base_url=base_url)
-    response = requests.head(client_url, cert=cert)
+    response = requests.head(client_url, cert=cert, verify=verify)
     if response.status_code != requests.status_codes.codes.ok:
         raise RuntimeError('Unable to check remote script version, got HTTP {retcode}, expected 200 OK.'.format(
             retcode=response.status_code))
@@ -311,7 +313,7 @@ def self_update(base_url, cert):
         return
 
     logger.info('Found new remote version %s, current version is %s. Updating.', version, __version__)
-    response = requests.get(client_url, cert=cert)
+    response = requests.get(client_url, cert=cert, verify=verify)
     if response.status_code != requests.status_codes.codes.ok:
         raise RuntimeError('Unable to download remote script, got HTTP {retcode}, expected 200 OK.'.format(
             retcode=response.status_code))
@@ -370,6 +372,9 @@ def parse_args(argv):
     parser.add_argument('-k', '--key',
                         help=('Path to the client SSH private key to use for sending the update. If not specified, '
                               'the private key is expected to be found in the certificate defined by -c/--cert.'))
+    parser.add_argument('--ca',
+                        help=('Path to a CA bundle to use to verify the DebMonitor server certificate. Mandatory when '
+                              '--update is set.'))
     parser.add_argument('-a', '--api', help='Version of the API to use. [default: v1]', default='v1',
                         choices=SUPPORTED_API_VERSIONS)
     parser.add_argument('-u', '--upgradable', action='store_true',
@@ -396,6 +401,13 @@ def parse_args(argv):
 
     if args.upgradable and args.dpkg_hook:
         parser.error('argument -u/--upgradable and -g/--dpkg-hook are mutually exclusive')
+
+    if args.update and args.ca is None:
+        parser.error('argument --ca is required when --update is set')
+
+    args.verify = True
+    if args.ca is not None:
+        args.verify = args.ca
 
     return args
 
@@ -452,7 +464,7 @@ def run(args, input_lines=None):
     elif args.cert is not None:
         cert = args.cert
 
-    response = requests.post(url, cert=cert, json=payload)
+    response = requests.post(url, cert=cert, json=payload, verify=args.verify)
     if response.status_code != requests.status_codes.codes.created:
         raise RuntimeError('Failed to send the update to the DebMonitor server: {status} {body}'.format(
             status=response.status_code, body=response.text))
@@ -460,7 +472,7 @@ def run(args, input_lines=None):
 
     if args.update:
         try:
-            self_update(base_url, cert)
+            self_update(base_url, cert, args.verify)
         except Exception as e:
             logger.error('Unable to self-update this script: %s', e)
 
