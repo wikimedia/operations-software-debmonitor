@@ -179,5 +179,7 @@ if DEBMONITOR_CONFIG.get('LDAP', {}):
                 value['SEARCH'],
                 ldap.SCOPE_ONELEVEL,
                 '({user_field}=%(user)s)'.format(user_field=value['USER_FIELD']))
+        elif key == 'GLOBAL_OPTIONS':  # Options for ldap.set_option(). Keys are ldap.OPT_* constants.
+            AUTH_LDAP_GLOBAL_OPTIONS = {getattr(ldap, opt_name): opt_value for opt_name, opt_value in value.items()}
         else:
             setattr(module, 'AUTH_LDAP_' + key, value)
