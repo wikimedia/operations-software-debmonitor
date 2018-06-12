@@ -4,33 +4,33 @@ import os
 import sys
 
 from collections import namedtuple
-try:  # Python3
-    from unittest.mock import MagicMock, mock_open, patch
-    BUILTINS = 'builtins'
-except ImportError:  # Python2
-    from mock import MagicMock, mock_open, patch
-    BUILTINS = '__builtin__'
 
 import pytest
+try:  # Python3
+    import unittest.mock as mock
+    BUILTINS = 'builtins'
+except ImportError:  # Python2
+    import mock
+    BUILTINS = '__builtin__'
+
+
+from tests.conftest import HOSTNAME
 
 
 OS_NAME = 'ExampleOS'
 KERNEL_RELEASE = '1.0.0'
-KERNEL_VERSION = 'ExampleOS v1.0.0-1'
-mocked_apt = MagicMock()
+KERNEL_VERSION = '{os} v1.0.0-1'.format(os=OS_NAME)
+mocked_apt = mock.MagicMock()
 mocked_apt.cache.Filter = object
-mocked_lsb = MagicMock()
-mocked_lsb.get_distro_information().get.return_value = OS_NAME
-mocked_platform = MagicMock()
+mocked_platform = mock.MagicMock()
 mocked_platform.release.return_value = KERNEL_RELEASE
 mocked_platform.version.return_value = KERNEL_VERSION
-with patch.dict(sys.modules, {'apt': mocked_apt, 'lsb_release': mocked_lsb, 'platform': mocked_platform}):
+with mock.patch.dict(sys.modules, {'apt': mocked_apt, 'platform': mocked_platform}):
     from utils import cli
 
 
 AptPackage = namedtuple('AptPackage', ['name', 'is_installed', 'installed', 'candidate'])
 AptPkgVersion = namedtuple('AptPkgVersion', ['source_name', 'version'])
-HOSTNAME = 'host1.example.com'
 DEBMONITOR_SERVER = 'debmonitor.example.com'
 DEBMONITOR_BASE_URL = 'https://{server}:443'.format(server=DEBMONITOR_SERVER)
 DEBMONITOR_UPDATE_URL = '{base_url}/hosts/{hostname}/update'.format(base_url=DEBMONITOR_BASE_URL, hostname=HOSTNAME)
@@ -38,7 +38,9 @@ DEBMONITOR_CLIENT_URL = '{base_url}/client'.format(base_url=DEBMONITOR_BASE_URL)
 DEBMONITOR_CLIENT_VERSION = '0.0.1'
 DEBMONITOR_CLIENT_CHECKSUM = '8d777f385d3dfec8815d20f7496026dc'
 DEBMONITOR_CLIENT_CONFIG = 'tests/fixtures/client.{mode}.conf'
+DEBMONITOR_CLIENT_CONFIG_OK = DEBMONITOR_CLIENT_CONFIG.format(mode='ok')
 DEBMONITOR_CLIENT_CA_BUNDLE = 'tests/fixtures/ca_bundle.crt'
+OS_RELEASE_FILE = 'tests/fixtures/os_release'
 APT_HOOK_LINES = {
     2: [
         # Installed
@@ -132,6 +134,15 @@ CLI_PACKAGES = [
     {'name': 'package22', 'version': '1.0.0-1', 'source': 'package2'},
     {'name': 'package3', 'version': '1.0.0-1', 'source': 'package31'},
 ]
+OS_RELEASE = """PRETTY_NAME="{os} GNU/Linux 001 (example)"
+NAME="{os} GNU/Linux"
+VERSION_ID="001"
+VERSION="001 (example)"
+ID={os}
+HOME_URL="https://www.example.org/"
+SUPPORT_URL="https://www.example.org/support"
+BUG_REPORT_URL="https://bugs.example.org/"
+""".format(os=OS_NAME)
 
 
 def test_parse_args_ok():
@@ -158,7 +169,7 @@ def test_parse_args_missing_server_dry_run():
 def test_parse_args_key_with_no_cert(capsys):
     """Calling parse_args with -k/--key but without -c/--cert should raise an error."""
     with pytest.raises(SystemExit):
-        cli.parse_args(['-n', '-k', 'keypath'])
+        cli.parse_args(['-n', '-k', 'cert.key'])
     _, err = capsys.readouterr()
     assert 'argument -c/--cert is required when -k/--key is set' in err
 
@@ -185,21 +196,20 @@ def test_parse_args_version(capsys):
 
 def test_parse_args_config():
     """Calling parse_args with --config should initialize the values from the configuration file."""
-    config = DEBMONITOR_CLIENT_CONFIG.format(mode='ok')
-    args = cli.parse_args(['--config', config])
-    assert args.config == config
+    args = cli.parse_args(['--config', DEBMONITOR_CLIENT_CONFIG_OK])
+    assert args.config == DEBMONITOR_CLIENT_CONFIG_OK
     assert args.server == DEBMONITOR_SERVER
-    assert args.port == 8081
+    assert args.port == 443
     assert args.cert == 'CERT_PATH'
     assert args.key == 'KEY_PATH'
+    assert args.ca == 'CA_PATH'
 
 
 def test_parse_args_config_override():
     """Calling parse_args with --config should allow to override the values with CLI arguments."""
-    config = DEBMONITOR_CLIENT_CONFIG.format(mode='ok')
     cert = 'DUMMY_CERT'
     key = 'DUMMY_KEY'
-    args = cli.parse_args(['--config', config, '-c', cert, '-k', key, '-p', '18081'])
+    args = cli.parse_args(['--config', DEBMONITOR_CLIENT_CONFIG_OK, '-c', cert, '-k', key, '-p', '18081'])
     assert args.cert == cert
     assert args.key == key
     assert args.port == 18081
@@ -264,7 +274,7 @@ def test_parse_apt_lines(params):
 def test_apt_filter_installed():
     """Calling AptInstalledFilter.apply() with an installed package should return True."""
     filter = cli.AptInstalledFilter()
-    package = MagicMock()
+    package = mock.MagicMock()
     package.is_installed = True
     assert filter.apply(package)
 
@@ -272,7 +282,7 @@ def test_apt_filter_installed():
 def test_apt_filter_not_installed():
     """Calling AptInstalledFilter.apply() with a not installed package should return False."""
     filter = cli.AptInstalledFilter()
-    package = MagicMock()
+    package = mock.MagicMock()
     package.is_installed = False
     assert filter.apply(package) is False
 
@@ -436,7 +446,7 @@ def test_self_update_has_update_ok(mocked_requests):
             cli.CLIENT_VERSION_HEADER: DEBMONITOR_CLIENT_VERSION,
             cli.CLIENT_CHECKSUM_HEADER: DEBMONITOR_CLIENT_CHECKSUM})
 
-    with patch('{mod}.open'.format(mod=BUILTINS), mock_open()) as mocked_open:
+    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(), create=True) as mocked_open:
         cli.self_update(DEBMONITOR_BASE_URL, None, True)
 
         mocked_open.assert_called_once_with(os.path.realpath(cli.__file__), mode='w')
@@ -446,15 +456,43 @@ def test_self_update_has_update_ok(mocked_requests):
     assert mocked_requests.called
 
 
+def test_get_distro_name():
+    """Calling get_distro_name() should return the OS name."""
+    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
+                    create=True) as mocked_open:
+        os = cli.get_distro_name()
+        assert os == OS_NAME
+        assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
+
+
+def test_get_distro_name_empty():
+    """Calling get_distro_name() with an empty file should return the 'unknown'."""
+    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(), create=True) as mocked_open:
+        os = cli.get_distro_name()
+        assert os == 'unknown'
+        assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
+
+
+def test_get_distro_name_fail():
+    """Calling get_distro_name() with an unreadable file, should return 'unknown'."""
+    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(), create=True) as mocked_open:
+        mocked_open.side_effect = IOError
+        os = cli.get_distro_name()
+        assert os == 'unknown'
+        assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
+
+
 @pytest.mark.parametrize('params', ([], ['-u'], ['-k', 'cert.key', '-c', 'cert.pem'], ['-c', 'cert.pem']))
-@patch('socket.getfqdn', return_value=HOSTNAME)
-def test_main(mocked_getfqdn, params, mocked_requests):
+def test_main(params, mocked_getfqdn, mocked_requests):
     """Calling main() should send the updates to the DebMonitor server with the above parameters."""
-    args = cli.parse_args(['-s', DEBMONITOR_SERVER] + params)
+    args = cli.parse_args(['--config', '/dev/null', '-s', DEBMONITOR_SERVER] + params)
     mocked_requests.register_uri('POST', DEBMONITOR_UPDATE_URL, status_code=201)
     _reset_apt_caches()
 
-    exit_code = cli.main(args)
+    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
+                    create=True) as mocked_open:
+        exit_code = cli.main(args)
+        assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
 
     mocked_getfqdn.assert_called_once_with()
     assert mocked_requests.called
@@ -462,10 +500,9 @@ def test_main(mocked_getfqdn, params, mocked_requests):
     assert mocked_requests.last_request.json() == _get_payload_with_packages(params)
 
 
-@patch('socket.getfqdn', return_value=HOSTNAME)
 def test_main_no_packages(mocked_getfqdn):
     """Calling main() if there are no updates should success without sending any update to the DebMonitor server."""
-    args = cli.parse_args(['-s', DEBMONITOR_SERVER])
+    args = cli.parse_args(['--config', DEBMONITOR_CLIENT_CONFIG_OK])
     _reset_apt_caches(empty=True)
 
     exit_code = cli.main(args)
@@ -474,13 +511,15 @@ def test_main_no_packages(mocked_getfqdn):
     assert exit_code == 0
 
 
-@patch('socket.getfqdn', return_value=HOSTNAME)
 def test_main_dry_run(mocked_getfqdn, capsys):
     """Calling main() with dry-run parameter should print the updates without sending them to the DebMonitor server."""
-    args = cli.parse_args(['-s', DEBMONITOR_SERVER, '-n'])
+    args = cli.parse_args(['--config', DEBMONITOR_CLIENT_CONFIG_OK, '-n'])
     _reset_apt_caches()
 
-    exit_code = cli.main(args)
+    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
+                    create=True) as mocked_open:
+        exit_code = cli.main(args)
+        assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
 
     out, _ = capsys.readouterr()
     mocked_getfqdn.assert_called_once_with()
@@ -489,13 +528,14 @@ def test_main_dry_run(mocked_getfqdn, capsys):
 
 
 @pytest.mark.parametrize('params', ([], ['-d']))
-@patch('socket.getfqdn', return_value=HOSTNAME)
-def test_main_wrong_http_code(mocked_getfqdn, params, mocked_requests, caplog):
+def test_main_wrong_http_code(params, mocked_getfqdn, mocked_requests, caplog):
     """Calling main() when the DebMonitor server returns a wrong HTTP code should return 1."""
-    args = cli.parse_args(['-s', DEBMONITOR_SERVER] + params)
+    args = cli.parse_args(['--config', DEBMONITOR_CLIENT_CONFIG_OK] + params)
     mocked_requests.register_uri('POST', DEBMONITOR_UPDATE_URL, status_code=400)
     _reset_apt_caches()
 
+    # Explicitely avoiding mocking open() due to a bug in Python 3.4.2 (jessie default version) that make it fail.
+    cli.OS_RELEASE_FILE = OS_RELEASE_FILE
     exit_code = cli.main(args)
 
     mocked_getfqdn.assert_called_once_with()
@@ -505,17 +545,19 @@ def test_main_wrong_http_code(mocked_getfqdn, params, mocked_requests, caplog):
     assert 'Failed to send the update to the DebMonitor server' in caplog.text
 
 
-@patch('socket.getfqdn', return_value=HOSTNAME)
 def test_main_dpkg_hook(mocked_getfqdn, mocked_requests):
     """Calling main() with -g should parse the input for a Dpkg::Pre-Install-Pkgs hook and send the update."""
-    args = cli.parse_args(['-s', DEBMONITOR_SERVER, '-g'])
+    args = cli.parse_args(['--config', DEBMONITOR_CLIENT_CONFIG_OK, '-g'])
     input_lines = _get_dpkg_hook_preamble(3) + APT_HOOK_LINES[3][0:2]
     mocked_requests.register_uri('POST', DEBMONITOR_UPDATE_URL, status_code=201)
     mocked_apt.cache.Cache().__getitem__.return_value = AptPackage(
         name='package-name', is_installed=False, installed=None,
         candidate=AptPkgVersion(source_name='package-name', version='1.0.0-1'))
 
-    exit_code = cli.main(args, input_lines=input_lines)
+    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
+                    create=True) as mocked_open:
+        exit_code = cli.main(args, input_lines=input_lines)
+        assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
 
     mocked_getfqdn.assert_called_once_with()
     assert mocked_requests.called
@@ -523,15 +565,17 @@ def test_main_dpkg_hook(mocked_getfqdn, mocked_requests):
     assert mocked_requests.last_request.json() == _get_payload_with_packages(['-g'])
 
 
-@patch('socket.getfqdn', return_value=HOSTNAME)
 def test_main_update_fail(mocked_getfqdn, mocked_requests, caplog):
     """Calling main() whit --update that fails the update should log the error and continue."""
-    args = cli.parse_args(['-s', DEBMONITOR_SERVER, '--update', '--ca', DEBMONITOR_CLIENT_CA_BUNDLE])
+    args = cli.parse_args(['--config', DEBMONITOR_CLIENT_CONFIG_OK, '--update'])
     mocked_requests.register_uri('POST', DEBMONITOR_UPDATE_URL, status_code=201)
     mocked_requests.register_uri('HEAD', DEBMONITOR_CLIENT_URL, status_code=500)
     _reset_apt_caches()
 
-    exit_code = cli.main(args)
+    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
+                    create=True) as mocked_open:
+        exit_code = cli.main(args)
+        assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
 
     assert mocked_requests.called
     mocked_getfqdn.assert_called_once_with()
@@ -539,11 +583,10 @@ def test_main_update_fail(mocked_getfqdn, mocked_requests, caplog):
     assert 'Unable to self-update this script' in caplog.text
 
 
-@patch('socket.getfqdn', return_value=HOSTNAME)
 def test_main_update_ok(mocked_getfqdn, mocked_requests, caplog):
     """Calling main() whit --update that succeed should update the CLI script."""
     caplog.set_level(logging.INFO)
-    args = cli.parse_args(['-s', DEBMONITOR_SERVER, '--update', '--ca', DEBMONITOR_CLIENT_CA_BUNDLE])
+    args = cli.parse_args(['--config', DEBMONITOR_CLIENT_CONFIG_OK, '--update'])
     mocked_requests.register_uri('POST', DEBMONITOR_UPDATE_URL, status_code=201)
     mocked_requests.register_uri(
         'HEAD', DEBMONITOR_CLIENT_URL, status_code=200, headers={cli.CLIENT_VERSION_HEADER: DEBMONITOR_CLIENT_VERSION})
@@ -553,10 +596,12 @@ def test_main_update_ok(mocked_getfqdn, mocked_requests, caplog):
             cli.CLIENT_CHECKSUM_HEADER: DEBMONITOR_CLIENT_CHECKSUM})
     _reset_apt_caches()
 
-    with patch('{mod}.open'.format(mod=BUILTINS), mock_open()) as mocked_open:
+    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
+                    create=True) as mocked_open:
         exit_code = cli.main(args)
-
-        mocked_open.assert_called_once_with(os.path.realpath(cli.__file__), mode='w')
+        print(mocked_open.mock_calls)
+        assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
+        assert mock.call(os.path.realpath(cli.__file__), mode='w') in mocked_open.mock_calls
         mocked_handler = mocked_open()
         mocked_handler.write.assert_called_once_with('data')
 

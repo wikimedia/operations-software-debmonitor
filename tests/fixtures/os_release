@@ -1,0 +1,8 @@
+PRETTY_NAME="ExampleOS GNU/Linux 001 (example)"
+NAME="ExampleOS GNU/Linux"
+VERSION_ID="001"
+VERSION="001 (example)"
+ID=ExampleOS
+HOME_URL="https://www.example.org/"
+SUPPORT_URL="https://www.example.org/support"
+BUG_REPORT_URL="https://bugs.example.org/"

@@ -30,7 +30,6 @@ This script was tested with Python 2.7, 3.5, 3.6.
 
   * python-apt
   * python-requests
-  * lsb-release
 
 * Deploy this standalone CLI script across the fleet, for example into ``/usr/local/bin/debmonitor``, and make it
   executable, optionally modifying the shebang to force a specific Python version. The script can also be downloaded
@@ -76,15 +75,15 @@ except ImportError:  # pragma: py3 no cover - Backward compatibility with Python
     from ConfigParser import SafeConfigParser as ConfigParser, Error as ConfigParserError
 
 import apt
-import lsb_release
 import requests
 
 
-__version__ = '1.2.0'
+__version__ = '1.3.0'
 
 SUPPORTED_API_VERSIONS = ('v1',)
 CLIENT_VERSION_HEADER = 'X-Debmonitor-Client-Version'
 CLIENT_CHECKSUM_HEADER = 'X-Debmonitor-Client-Checksum'
+OS_RELEASE_FILE = '/etc/os-release'
 logger = logging.getLogger('debmonitor')
 AptLineV2 = namedtuple('LineV2', ['name', 'version_from', 'direction', 'version_to', 'action'])
 AptLineV3 = namedtuple('LineV3', ['name', 'version_from', 'arch_from', 'multiarch_from', 'direction', 'version_to',
@@ -329,6 +328,22 @@ def self_update(base_url, cert, verify):
     logger.info('Successfully self-updated DebMonitor CLI to version %s', version)
 
 
+def get_distro_name():
+    """Return the Linux distribution name, uppercase first character."""
+    os = 'unknown'
+    try:
+        with open(OS_RELEASE_FILE, mode='r') as os_file:
+            for line in os_file.readlines():
+                if line.startswith('ID='):
+                    osname = line.split('=', 1)[1].strip()
+                    os = osname[0].upper() + osname[1:]
+                    break
+    except (IOError, IndexError):
+        pass  # Explicitely ignored exception, os is already set to unknown.
+
+    return os
+
+
 def parse_args(argv):
     """Parse command line arguments.
 
@@ -439,7 +454,7 @@ def run(args, input_lines=None):
 
     payload = {
         'api_version': args.api,
-        'os': lsb_release.get_distro_information().get('ID', 'unknown'),
+        'os': get_distro_name(),
         'hostname': hostname,
         'running_kernel': {
             'release': platform.release(),
