@@ -1,0 +1,5 @@
+debmonitor (0.1.3-1) unstable; urgency=low
+
+  * Initial release, so far only the client side tools are packaged
+
+ -- Moritz Muehlenhoff <moritz@wikimedia.org>  Thu,  7 Jun 2018 13:51:19 +0100

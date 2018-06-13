@@ -1,0 +1,8 @@
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: debmonitor
+Source: https://gerrit.wikimedia.org/operations/software/debmonitor.git
+
+Files: *
+Copyright: 2017-2018  Riccardo Coccioli <rcoccioli@wikimedia.org>
+                      Wikimedia Foundation, Inc.
+License: GPL-3

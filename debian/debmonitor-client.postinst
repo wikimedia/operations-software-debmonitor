@@ -1,0 +1,35 @@
+#!/bin/bash
+
+set -e
+
+case "$1" in
+  configure)
+    # Add debmonitor system user
+    if ! getent passwd debmonitor > /dev/null; then
+        adduser --quiet --system --no-create-home --home /nonexistent \
+            --group --gecos "DebMonitor system user" debmonitor || true
+    fi
+
+    # If the DebMonitor has been prepopulated (e.g. when using a configuration
+    # management system), ingest all packages
+    if [[ -e /etc/debmonitor.conf ]]; then
+        if grep -Eq '^server=.+' /etc/debmonitor.conf ; then
+            su - debmonitor -c '/usr/bin/debmonitor-client' || true
+        fi
+    fi
+
+  ;;
+
+  abort-upgrade|abort-remove|abort-deconfigure)
+    :
+  ;;
+
+  *)
+    echo "postinst called with unknown argument \`$1'" >&2
+    exit 1
+  ;;
+esac
+
+#DEBHELPER#
+
+exit 0

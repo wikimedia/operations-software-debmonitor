@@ -1,0 +1,11 @@
+#!/usr/bin/make -f
+export PYBUILD_NAME=debmonitor
+
+%:
+	dh $@ --with python3
+
+override_dh_auto_build:
+	# We don't ship the server part yet, skipping
+
+override_dh_auto_install:
+	# We don't ship the server part yet, skipping

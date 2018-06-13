@@ -1,0 +1,6 @@
+# Tell dpkg to use version 3 of the protocol for the Pre-Install-Pkgs hook (version 2 is also supported)
+Dpkg::Tools::options::/usr/bin/debmonitor::Version "3";
+# Set the dpkg hook to call DebMonitor for any change with the -g/--dpkg option to read the changes from stdin
+Dpkg::Pre-Install-Pkgs {"su - debmonitor -c '/usr/bin/debmonitor -g' || true";};
+# Set the APT update hook to call DebMonitor with the -u/upgradable option to send only the pending upgrades
+APT::Update::Post-Invoke {"su - debmonitor -c '/usr/bin/debmonitor -u' || true"};

@@ -1,0 +1,3 @@
+#!/usr/bin/dh-exec
+utils/cli.py => /usr/bin/debmonitor-client
+debian/apt-hook => /etc/apt/apt.conf.d/10debmonitor
