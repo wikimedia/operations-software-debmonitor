@@ -42,7 +42,8 @@ class SrcPackageVersionManager(SelectManager):
     def get_or_create(self, **kwargs):
         """Override parent method to lazily create the missing objects."""
         arguments = {'version': kwargs['version'], 'os': kwargs['os']}
-        if 'src_package' in kwargs and kwargs['src_package'] is not None:  # Use already queried objects
+        if ('src_package' in kwargs and kwargs['src_package'] is not None and
+                kwargs['src_package'].name == kwargs['name']):  # Use already queried objects
             arguments['src_package'] = kwargs['src_package']
         else:
             arguments['src_package'], _ = SrcPackage.objects.get_or_create(name=kwargs['name'])

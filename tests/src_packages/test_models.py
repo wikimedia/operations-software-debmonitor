@@ -36,3 +36,14 @@ def test_srcpackageversion_get_or_create():
     package, created = models.SrcPackageVersion.objects.get_or_create(name=package_name, version='1.2.3-1', os=os)
     assert created
     assert isinstance(package.src_package, models.SrcPackage)
+
+
+def test_srcpackageversion_get_or_create_cached():
+    """Calling the get_or_create() method of SrcPackageVersion should use already queried objects, if available."""
+    os = models.OS.objects.get(name='os1')
+    existing = models.SrcPackage.objects.get(name='package1')
+    package, created = models.SrcPackageVersion.objects.get_or_create(
+        name=existing.name, version='1.2.3-1', os=os, src_package=existing)
+    assert created
+    assert isinstance(package.src_package, models.SrcPackage)
+    assert package.src_package is existing
