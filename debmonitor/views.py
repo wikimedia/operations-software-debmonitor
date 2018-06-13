@@ -1,13 +1,16 @@
 import logging
 
+from django import http
 from django.db.models import Count, Max, Min
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_safe
+from stronghold.decorators import public
 
 import debmonitor
 
 from bin_packages.models import Package, PackageVersion
+from hosts import HostAuthError, verify_clients
 from hosts.models import Host, HostPackage, SECURITY_UPGRADE
 from src_packages.models import SrcPackage, SrcPackageVersion
 
@@ -78,8 +81,14 @@ def index(request):
 
 
 @require_safe
+@public
 def client(request):
     """Download the DebMonitor CLI script on GET, add custom headers with the version and checksum."""
+    try:
+        verify_clients(request)
+    except HostAuthError as e:
+        return http.HttpResponseForbidden(e, content_type='text/plain')
+
     version, checksum, body = debmonitor.get_client()
 
     if request.method == 'HEAD':

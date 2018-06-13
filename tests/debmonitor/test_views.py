@@ -5,6 +5,7 @@ import pytest
 from django.urls import resolve, reverse
 
 from debmonitor import views
+from hosts import SSL_CLIENT_VERIFY_HEADER, SSL_CLIENT_VERIFY_SUCCESS
 
 
 INDEX_URL = '/'
@@ -62,7 +63,7 @@ def test_client_get_no_version(client):
 
 @pytest.mark.django_db
 @patch('builtins.open', mock_open(read_data=CLIENT_BODY_DUMMY_1))
-def test_client_get(client, settings):
+def test_client_get(client):
     """A GET to the client endpoint should return the client with its version and checksum."""
     response = client.get(CLIENT_URL)
 
@@ -74,7 +75,7 @@ def test_client_get(client, settings):
 
 @pytest.mark.django_db
 @patch('builtins.open', mock_open(read_data=CLIENT_BODY_DUMMY_2))
-def test_client_head(client, settings):
+def test_client_head(client):
     """A HEAD to the client endpoint should return the client's version and checksum."""
     response = client.head(CLIENT_URL)
 
@@ -88,3 +89,29 @@ def test_client_view_function():
     """Resolving the URL for the client endpoint should return the correct view."""
     view = resolve(CLIENT_URL)
     assert view.func is views.client
+
+
+@pytest.mark.django_db
+def test_client_no_auth(client, settings):
+    """A GET to the client endpoint without auth should return Forbidden."""
+    settings.DEBMONITOR_VERIFY_CLIENTS = True
+    response = client.get(CLIENT_URL)
+
+    assert response.status_code == 403
+    assert views.CLIENT_VERSION_HEADER not in response
+    assert views.CLIENT_CHECKSUM_HEADER not in response
+    assert 'Client certificate validation failed' in response.content.decode('utf-8')
+
+
+@pytest.mark.django_db
+@patch('builtins.open', mock_open(read_data=CLIENT_BODY_DUMMY_1))
+def test_client_auth(client, settings):
+    """A GET to the client endpoint with auth should return the client code."""
+    settings.DEBMONITOR_VERIFY_CLIENTS = True
+    headers = {SSL_CLIENT_VERIFY_HEADER: SSL_CLIENT_VERIFY_SUCCESS}
+    response = client.get(CLIENT_URL, **headers)
+
+    assert response.status_code == 200
+    assert response[views.CLIENT_VERSION_HEADER] == CLIENT_VERSION
+    assert response[views.CLIENT_CHECKSUM_HEADER] == CLIENT_CHECKSUM_DUMMY_1
+    assert response.content.decode('utf-8') == CLIENT_BODY_DUMMY_1
