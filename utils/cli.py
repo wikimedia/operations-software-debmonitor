@@ -480,7 +480,9 @@ def run(args, input_lines=None):
     elif args.cert is not None:
         cert = args.cert
 
-    response = requests.post(url, cert=cert, json=payload, verify=args.verify)
+    # Not using json= for backward compatibility with OSes with python-requests < 2.4.2 like Ubuntu trusty.
+    response = requests.post(url, cert=cert, data=json.dumps(payload), headers={'Content-Type': 'application/json'},
+                             verify=args.verify)
     if response.status_code != requests.status_codes.codes.created:
         raise RuntimeError('Failed to send the update to the DebMonitor server: {status} {body}'.format(
             status=response.status_code, body=response.text))
