@@ -239,5 +239,4 @@ def test_update_status_code_existing_update(client):
     """Updating an existing host with a correct payload with updates should return 201 Created."""
     rand = str(uuid.uuid4())
     response = client.generic('POST', EXISTING_HOST_UPDATE_URL, PAYLOAD_EXISTING_UPDATE % {'uuid': rand})
-    print(response.content)
     assert response.status_code == 201

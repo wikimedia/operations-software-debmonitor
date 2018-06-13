@@ -49,7 +49,6 @@ def test_client_reverse_url():
     assert url == CLIENT_URL
 
 
-@pytest.mark.django_db
 @patch('builtins.open', mock_open(read_data=CLIENT_BODY_NO_VERSION))
 def test_client_get_no_version(client):
     """A GET to the client endpoint should return the client with its version and checksum."""
@@ -61,7 +60,6 @@ def test_client_get_no_version(client):
     assert response.content.decode('utf-8') == CLIENT_BODY_NO_VERSION
 
 
-@pytest.mark.django_db
 @patch('builtins.open', mock_open(read_data=CLIENT_BODY_DUMMY_1))
 def test_client_get(client):
     """A GET to the client endpoint should return the client with its version and checksum."""
@@ -73,7 +71,6 @@ def test_client_get(client):
     assert response.content.decode('utf-8') == CLIENT_BODY_DUMMY_1
 
 
-@pytest.mark.django_db
 @patch('builtins.open', mock_open(read_data=CLIENT_BODY_DUMMY_2))
 def test_client_head(client):
     """A HEAD to the client endpoint should return the client's version and checksum."""
@@ -91,7 +88,6 @@ def test_client_view_function():
     assert view.func is views.client
 
 
-@pytest.mark.django_db
 def test_client_no_auth(client, settings):
     """A GET to the client endpoint without auth should return Forbidden."""
     settings.DEBMONITOR_VERIFY_CLIENTS = True
@@ -103,7 +99,6 @@ def test_client_no_auth(client, settings):
     assert 'Client certificate validation failed' in response.content.decode('utf-8')
 
 
-@pytest.mark.django_db
 @patch('builtins.open', mock_open(read_data=CLIENT_BODY_DUMMY_1))
 def test_client_auth(client, settings):
     """A GET to the client endpoint with auth should return the client code."""

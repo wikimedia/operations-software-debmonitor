@@ -599,7 +599,6 @@ def test_main_update_ok(mocked_getfqdn, mocked_requests, caplog):
     with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
                     create=True) as mocked_open:
         exit_code = cli.main(args)
-        print(mocked_open.mock_calls)
         assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
         assert mock.call(os.path.realpath(cli.__file__), mode='w') in mocked_open.mock_calls
         mocked_handler = mocked_open()
