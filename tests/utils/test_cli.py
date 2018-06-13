@@ -187,7 +187,7 @@ def test_parse_args_version(capsys):
     with pytest.raises(SystemExit):
         cli.parse_args(['--version'])
     out, err = capsys.readouterr()
-    msg = 'debmonitor {ver}'.format(ver=cli.__version__)
+    msg = 'debmonitor-client {ver}'.format(ver=cli.__version__)
     if sys.version_info.major == 2:
         assert msg in err
     else:
