@@ -1,5 +1,7 @@
 import uuid
 
+from unittest.mock import patch
+
 import pytest
 
 from django.urls import resolve, reverse
@@ -240,3 +242,15 @@ def test_update_status_code_existing_update(client):
     rand = str(uuid.uuid4())
     response = client.generic('POST', EXISTING_HOST_UPDATE_URL, PAYLOAD_EXISTING_UPDATE % {'uuid': rand})
     assert response.status_code == 201
+
+
+@pytest.mark.django_db
+@patch('hosts.views._update_v1', side_effect=RuntimeError)
+def test_update_raise(mocked_update_v1, client):
+    """If the update raise an exception, a plain/text 500 should be returned."""
+    rand = str(uuid.uuid4())
+    response = client.generic('POST', EXISTING_HOST_UPDATE_URL, PAYLOAD_EXISTING_UPDATE % {'uuid': rand})
+    assert response.status_code == 500
+    assert 'Unable to update host' in response.content.decode('utf-8')
+    assert response['Content-Type'] == 'text/plain'
+    assert mocked_update_v1.called

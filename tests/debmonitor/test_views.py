@@ -110,3 +110,14 @@ def test_client_auth(client, settings):
     assert response[views.CLIENT_VERSION_HEADER] == CLIENT_VERSION
     assert response[views.CLIENT_CHECKSUM_HEADER] == CLIENT_CHECKSUM_DUMMY_1
     assert response.content.decode('utf-8') == CLIENT_BODY_DUMMY_1
+
+
+@patch('debmonitor.get_client', side_effect=RuntimeError)
+def test_client_raise(mocked_get_client, client):
+    """A GET to the client endpoint in case of error should return a text/plain 500."""
+    response = client.get(CLIENT_URL)
+
+    assert response.status_code == 500
+    assert 'Unable to retrieve client code' in response.content.decode('utf-8')
+    assert response['Content-Type'] == 'text/plain'
+    assert mocked_get_client.called_once_with()

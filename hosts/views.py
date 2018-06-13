@@ -20,6 +20,7 @@ try:
 except AttributeError:  # pragma: notpy34 no cover - Backward compatibility with Python 3.4
     JSONDecodeError = ValueError
 
+TEXT_PLAIN = 'text/plain'
 logger = logging.getLogger(__name__)
 
 
@@ -144,34 +145,39 @@ def update(request, name):
     try:
         verify_clients(request, hostname=name)
     except HostAuthError as e:
-        return http.HttpResponseForbidden(e, content_type='text/plain')
+        return http.HttpResponseForbidden(e, content_type=TEXT_PLAIN)
 
     if not request.body:
         return http.HttpResponseBadRequest("Empty POST, expected JSON string: {req}".format(
-            req=request))
+            req=request), content_type=TEXT_PLAIN)
 
     try:
         payload = json.loads(request.body.decode('utf-8'))
     except JSONDecodeError as e:
-        return http.HttpResponseBadRequest('Unable to parse JSON string payload: {e}'.format(e=e))
+        return http.HttpResponseBadRequest(
+            'Unable to parse JSON string payload: {e}'.format(e=e), content_type=TEXT_PLAIN)
 
     if name != payload.get('hostname', ''):
         return http.HttpResponseBadRequest("URL host '{name}' and POST payload hostname '{host}' do not match".format(
-            name=name, host=payload.get('hostname', '')))
+            name=name, host=payload.get('hostname', '')), content_type=TEXT_PLAIN)
 
     try:
         os = OS.objects.get(name=payload['os'])
     except OS.DoesNotExist as e:
-        return http.HttpResponseBadRequest("Unable to find OS '{os}': {e}".format(os=payload['os'], e=e))
+        return http.HttpResponseBadRequest(
+            "Unable to find OS '{os}': {e}".format(os=payload['os'], e=e), content_type=TEXT_PLAIN)
 
+    message = "Unable to update host '{host}'".format(host=name)
     try:
         _update_v1(request, name, os, payload)
     except (KeyError, TypeError) as e:
-        message = "Unable to update host '{host}'".format(host=name)
         logger.exception(message)
-        return http.HttpResponseBadRequest('{message}: {e}'.format(message=message, e=e))
+        return http.HttpResponseBadRequest('{message}: {e}'.format(message=message, e=e), content_type=TEXT_PLAIN)
+    except Exception as e:  # Force a response to avoid using the HTML template for all other 500s
+        logger.exception(message)
+        return http.HttpResponseServerError('{message}: {e}'.format(message=message, e=e), content_type=TEXT_PLAIN)
     else:
-        return http.HttpResponse(status=201)
+        return http.HttpResponse(status=201, content_type=TEXT_PLAIN)
 
 
 def _update_v1(request, name, os, payload):
