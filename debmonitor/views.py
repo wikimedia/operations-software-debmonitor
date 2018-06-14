@@ -1,13 +1,15 @@
 import logging
 
+from django import http
 from django.db.models import Count, Max, Min
-from django.http import HttpResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_safe
+from stronghold.decorators import public
 
 import debmonitor
 
 from bin_packages.models import Package, PackageVersion
+from hosts import HostAuthError, verify_clients
 from hosts.models import Host, HostPackage, SECURITY_UPGRADE
 from src_packages.models import SrcPackage, SrcPackageVersion
 
@@ -78,16 +80,28 @@ def index(request):
 
 
 @require_safe
+@public
 def client(request):
     """Download the DebMonitor CLI script on GET, add custom headers with the version and checksum."""
-    version, checksum, body = debmonitor.get_client()
+    try:
+        verify_clients(request)
+    except HostAuthError as e:
+        return http.HttpResponseForbidden(e, content_type='text/plain')
+
+    try:
+        version, checksum, body = debmonitor.get_client()
+    except Exception as e:  # Force a response to avoid using the HTML template for all other 500s
+        message = 'Unable to retrieve client code'
+        logger.exception(message)
+        return http.HttpResponseServerError('{message}: {e}'.format(message=message, e=e), content_type='text/plain')
 
     if request.method == 'HEAD':
-        response = HttpResponse()
+        response = http.HttpResponse()
     elif request.method == 'GET':
-        response = HttpResponse(body, content_type='text/x-python')
+        response = http.HttpResponse(body, content_type='text/x-python')
     else:  # pragma: no cover - this should never happen due to @require_safe
-        raise RuntimeError('Invalid method {method}'.format(method=request.method))
+        return http.HttpResponseBadRequest(
+            'Invalid method {method}'.format(method=request.method), content_type='text/plain')
 
     response[CLIENT_VERSION_HEADER] = version
     response[CLIENT_CHECKSUM_HEADER] = checksum

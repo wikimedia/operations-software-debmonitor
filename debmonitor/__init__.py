@@ -37,7 +37,7 @@ def get_client():
     with open(path, 'r') as f:
         body = f.read()
 
-    checksum = hashlib.md5(body.encode('utf-8')).hexdigest()
+    checksum = hashlib.sha256(body.encode('utf-8')).hexdigest()
     version = ''
     tree = ast.parse(body)
     for node in tree.body:

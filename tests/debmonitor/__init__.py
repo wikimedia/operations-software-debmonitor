@@ -1,0 +1,12 @@
+CLIENT_VERSION = '0.1-client0'
+CLIENT_BODY_DUMMY_1 = """import os
+__version__ = '0.1-client0'
+"""
+CLIENT_CHECKSUM_DUMMY_1 = '8e726df11735f74b9f795f94ff79a39c422207bca1f51cdd21b2f0e91c50b2cc'
+CLIENT_BODY_DUMMY_2 = """import os
+__dummy__ = 1
+__version__ = '0.1-client0'
+"""
+CLIENT_CHECKSUM_DUMMY_2 = '46844273c0dda349676c321b1c2f20c540f5cf4f1f97dce85bc03852f30f6c10'
+CLIENT_BODY_NO_VERSION = 'import os'
+CLIENT_CHECKSUM_NO_VERSION = 'de2abade832c8e350a1bdc98cfcdb1e202ac4749c5fc51a4a970d41736b6df5c'

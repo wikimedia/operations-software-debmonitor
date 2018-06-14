@@ -2,7 +2,6 @@ import json
 import logging
 
 from django import http
-from django.conf import settings
 from django.db.models import BooleanField, Case, Count, When
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
@@ -11,7 +10,7 @@ from django.views.decorators.http import require_safe, require_POST
 from stronghold.decorators import public
 
 from bin_packages.models import PackageVersion
-from hosts import is_valid_cn
+from hosts import HostAuthError, verify_clients
 from hosts.models import Host, HostPackage, SECURITY_UPGRADE
 from src_packages.models import OS
 
@@ -21,17 +20,8 @@ try:
 except AttributeError:  # pragma: notpy34 no cover - Backward compatibility with Python 3.4
     JSONDecodeError = ValueError
 
+TEXT_PLAIN = 'text/plain'
 logger = logging.getLogger(__name__)
-
-# String to use to check if the web server has verified the client certificate.
-# Nginx sets the $ssl_client_verify variable to NONE, SUCCESS, FAILED:reason.
-# Apache sets the environmental variable SSL_CLIENT_VERIFY to NONE, SUCCESS, GENEROUS or FAILED:reason.
-SSL_CLIENT_VERIFY_SUCCESS = 'SUCCESS'
-# HTTP header that holds the client's certificate validation result as reported by the web server.
-SSL_CLIENT_VERIFY_HEADER = 'HTTP_X_CLIENT_CERT_VERIFY'
-# HTTP header that holds the client's certificate DN as reported by the web browser
-# (i.e. $ssl_client_s_dn for Nginx and SSL_CLIENT_S_DN for Apache).
-SSL_CLIENT_SUBJECT_DN_HEADER = 'HTTP_X_CLIENT_CERT_SUBJECT_DN'
 
 
 @require_safe
@@ -65,6 +55,7 @@ def index(request):
             {'targets': [2], 'orderData': [6]},
             {'targets': [2, 3, 4, 5, 6], 'searchable': False},
         ]),
+        'datatables_page_length': 50,
         'hosts': hosts,
         'section': 'hosts',
         'security_upgrades': security_upgrades,
@@ -89,6 +80,7 @@ def kernel_index(request):
 
     args = {
         'datatables_column_defs': json.dumps([{'targets': [2], 'searchable': False}]),
+        'datatables_page_length': -1,
         'kernels': kernels,
         'section': 'kernels',
         'subtitle': '',
@@ -107,7 +99,7 @@ def detail(request, name):
             When(upgradable_version__isnull=False, then=True),
             default=False,
             output_field=BooleanField())
-        ).order_by('-upgrade_type', 'has_upgrade', 'package__name')
+        ).order_by('-has_upgrade', '-upgrade_type', 'package__name')
 
     table_headers = [
         {'title': 'Package', 'tooltip': 'Name of the binary package'},
@@ -119,6 +111,7 @@ def detail(request, name):
     args = {
         'datatables_column_defs': json.dumps(
             [{'targets': [3], 'visible': False}, {'targets': [1, 2], 'orderable': False}]),
+        'datatables_page_length': -1,
         'host': host,
         'host_packages': host_packages,
         'section': 'hosts',
@@ -138,6 +131,7 @@ def kernel_detail(request, slug):
         raise http.Http404
 
     args = {
+        'datatables_page_length': 50,
         'hosts': hosts,
         'section': 'kernels',
         'subtitle': 'Kernel',
@@ -152,43 +146,42 @@ def kernel_detail(request, slug):
 @public
 def update(request, name):
     """Update a host and all it's related information from a JSON."""
+    try:
+        verify_clients(request, hostname=name)
+    except HostAuthError as e:
+        return http.HttpResponseForbidden(e, content_type=TEXT_PLAIN)
+
     if not request.body:
         return http.HttpResponseBadRequest("Empty POST, expected JSON string: {req}".format(
-            req=request))
+            req=request), content_type=TEXT_PLAIN)
 
     try:
         payload = json.loads(request.body.decode('utf-8'))
     except JSONDecodeError as e:
-        return http.HttpResponseBadRequest('Unable to parse JSON string payload: {e}'.format(e=e))
+        return http.HttpResponseBadRequest(
+            'Unable to parse JSON string payload: {e}'.format(e=e), content_type=TEXT_PLAIN)
 
     if name != payload.get('hostname', ''):
         return http.HttpResponseBadRequest("URL host '{name}' and POST payload hostname '{host}' do not match".format(
-            name=name, host=payload.get('hostname', '')))
-
-    if settings.DEBMONITOR_VERIFY_CLIENTS:
-        ssl_verify = request.META.get(SSL_CLIENT_VERIFY_HEADER, '')
-        if ssl_verify != SSL_CLIENT_VERIFY_SUCCESS:
-            return http.HttpResponseForbidden('Client certificate validation failed: {message}'.format(
-                message=ssl_verify))
-
-        ssl_dn = request.META.get(SSL_CLIENT_SUBJECT_DN_HEADER, '')
-        if not is_valid_cn(ssl_dn, name):
-            return http.HttpResponseForbidden("Unauthorized to update host '{name}' with certificate '{dn}'".format(
-                name=name, dn=ssl_dn))
+            name=name, host=payload.get('hostname', '')), content_type=TEXT_PLAIN)
 
     try:
         os = OS.objects.get(name=payload['os'])
     except OS.DoesNotExist as e:
-        return http.HttpResponseBadRequest("Unable to find OS '{os}': {e}".format(os=payload['os'], e=e))
+        return http.HttpResponseBadRequest(
+            "Unable to find OS '{os}': {e}".format(os=payload['os'], e=e), content_type=TEXT_PLAIN)
 
+    message = "Unable to update host '{host}'".format(host=name)
     try:
         _update_v1(request, name, os, payload)
     except (KeyError, TypeError) as e:
-        message = "Unable to update host '{host}'".format(host=name)
         logger.exception(message)
-        return http.HttpResponseBadRequest('{message}: {e}'.format(message=message, e=e))
+        return http.HttpResponseBadRequest('{message}: {e}'.format(message=message, e=e), content_type=TEXT_PLAIN)
+    except Exception as e:  # Force a response to avoid using the HTML template for all other 500s
+        logger.exception(message)
+        return http.HttpResponseServerError('{message}: {e}'.format(message=message, e=e), content_type=TEXT_PLAIN)
     else:
-        return http.HttpResponse(status=201)
+        return http.HttpResponse(status=201, content_type=TEXT_PLAIN)
 
 
 def _update_v1(request, name, os, payload):

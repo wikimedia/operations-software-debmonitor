@@ -45,6 +45,7 @@ def index(request):
         'custom_sort': {'name': 'Package', 'installed': 3, 'upgrades': 4, 'security': 5},
         'datatables_column_defs': json.dumps([
             {'targets': [3, 4, 5], 'visible': False, 'searchable': False, 'sortable': False}]),
+        'datatables_page_length': 50,
         'packages': packages,
         'section': 'bin_packages',
         'security_upgrades': security_upgrades,
@@ -107,6 +108,7 @@ def detail(request, name):
         'default_order': json.dumps([[0, 'asc'], [1, 'asc']]),
         'datatables_column_defs': json.dumps([
             {'targets': [0, 1, 4], 'visible': False, 'sortable': False}, {'targets': [3], 'sortable': False}]),
+        'datatables_page_length': 50,
         'host_packages': host_packages,
         'os_versions': os_versions,
         'package_versions': package_versions,

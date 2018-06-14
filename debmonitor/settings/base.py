@@ -148,7 +148,11 @@ LOGGING = {
             'level': 'INFO',  # message level to be written to console
         },
     },
-    'loggers': {},
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+        },
+    },
 }
 
 if DEBMONITOR_CONFIG.get('LOG_DB_QUERIES', False):

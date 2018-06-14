@@ -35,7 +35,9 @@ $(document).ready(function() {
         'aPaginationLengths': [50,100,500],
         'deferRender': true,
         'fixedHeader': true,
-        'iDisplayLength': 50,
+        {% if datatables_page_length %}
+        'pageLength': {{ datatables_page_length }},
+        {% endif %}
         'initComplete': function (settings, json) {
             $('#debmonitor-table').removeClass('hide-loading');
             {% if custom_sort %}

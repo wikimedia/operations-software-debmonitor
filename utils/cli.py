@@ -23,7 +23,7 @@ DebMonitor CLI - Debian packages tracker CLI.
 Automatically collect the current status of all installed and upgradable packages and report it to a DebMonitor server.
 It can report all installed and upgradable packages, just the upgradable ones, or the changes reported by a Dpkg hook.
 
-This script was tested with Python 2.7, 3.5, 3.6.
+This script was tested with Python 2.7, 3.4, 3.5, 3.6.
 
 * Install the following Debian packages dependencies, choosing either the Python2 or the Python3 variant based on which
   version of Python will be used to run this script:
@@ -78,7 +78,8 @@ import apt
 import requests
 
 
-__version__ = '1.3.0'
+# The client version is based on the server's major.minor version plus a dedicated client-specific incremental number.
+__version__ = '0.1client2'
 
 SUPPORTED_API_VERSIONS = ('v1',)
 CLIENT_VERSION_HEADER = 'X-Debmonitor-Client-Version'
@@ -317,7 +318,7 @@ def self_update(base_url, cert, verify):
         raise RuntimeError('Unable to download remote script, got HTTP {retcode}, expected 200 OK.'.format(
             retcode=response.status_code))
 
-    checksum = hashlib.md5(response.content).hexdigest()
+    checksum = hashlib.sha256(response.content).hexdigest()
     if response.headers.get(CLIENT_CHECKSUM_HEADER) != checksum:
         raise RuntimeError('The checksum of the script do not match the HTTP header: {checksum} != {header}'.format(
             checksum=checksum, header=response.headers.get(CLIENT_CHECKSUM_HEADER)))
@@ -376,7 +377,7 @@ def parse_args(argv):
 
     # Add remaining CLI options
     parser = argparse.ArgumentParser(
-        prog='debmonitor', description='DebMonitor CLI - Debian packages tracker CLI', epilog=__doc__,
+        prog='debmonitor-client', description='DebMonitor CLI - Debian packages tracker CLI', epilog=__doc__,
         parents=[conf_parser], formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('-s', '--server', help='DebMonitor server DNS name, required unless -n/--dry-run is set.')
     parser.add_argument('-p', '--port', default=443, type=int,
@@ -479,7 +480,9 @@ def run(args, input_lines=None):
     elif args.cert is not None:
         cert = args.cert
 
-    response = requests.post(url, cert=cert, json=payload, verify=args.verify)
+    # Not using json= for backward compatibility with OSes with python-requests < 2.4.2 like Ubuntu trusty.
+    response = requests.post(url, cert=cert, data=json.dumps(payload), headers={'Content-Type': 'application/json'},
+                             verify=args.verify)
     if response.status_code != requests.status_codes.codes.created:
         raise RuntimeError('Failed to send the update to the DebMonitor server: {status} {body}'.format(
             status=response.status_code, body=response.text))
