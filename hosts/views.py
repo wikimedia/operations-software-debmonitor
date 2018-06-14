@@ -97,7 +97,7 @@ def detail(request, name):
             When(upgradable_version__isnull=False, then=True),
             default=False,
             output_field=BooleanField())
-        ).order_by('-upgrade_type', 'has_upgrade', 'package__name')
+        ).order_by('-has_upgrade', '-upgrade_type', 'package__name')
 
     table_headers = [
         {'title': 'Package', 'tooltip': 'Name of the binary package'},
