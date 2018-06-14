@@ -26,6 +26,7 @@ def index(request):
     ]
 
     args = {
+        'datatables_page_length': 50,
         'packages': packages,
         'section': 'src_packages',
         'subtitle': '',
@@ -52,6 +53,7 @@ def detail(request, name):
     ]
 
     args = {
+        'datatables_page_length': 50,
         # The IDs are DataTable column IDs.
         'default_order': json.dumps([[0, 'asc'], [1, 'asc']]),
         'package_versions': package_versions,

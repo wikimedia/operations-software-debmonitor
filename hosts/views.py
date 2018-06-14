@@ -55,6 +55,7 @@ def index(request):
             {'targets': [2], 'orderData': [6]},
             {'targets': [2, 3, 4, 5, 6], 'searchable': False},
         ]),
+        'datatables_page_length': 50,
         'hosts': hosts,
         'section': 'hosts',
         'security_upgrades': security_upgrades,
@@ -79,6 +80,7 @@ def kernel_index(request):
 
     args = {
         'datatables_column_defs': json.dumps([{'targets': [2], 'searchable': False}]),
+        'datatables_page_length': -1,
         'kernels': kernels,
         'section': 'kernels',
         'subtitle': '',
@@ -109,6 +111,7 @@ def detail(request, name):
     args = {
         'datatables_column_defs': json.dumps(
             [{'targets': [3], 'visible': False}, {'targets': [1, 2], 'orderable': False}]),
+        'datatables_page_length': -1,
         'host': host,
         'host_packages': host_packages,
         'section': 'hosts',
@@ -128,6 +131,7 @@ def kernel_detail(request, slug):
         raise http.Http404
 
     args = {
+        'datatables_page_length': 50,
         'hosts': hosts,
         'section': 'kernels',
         'subtitle': 'Kernel',
