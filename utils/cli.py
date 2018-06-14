@@ -79,7 +79,7 @@ import requests
 
 
 # The client version is based on the server's major.minor version plus a dedicated client-specific incremental number.
-__version__ = '0.1client1'
+__version__ = '0.1client2'
 
 SUPPORTED_API_VERSIONS = ('v1',)
 CLIENT_VERSION_HEADER = 'X-Debmonitor-Client-Version'
@@ -318,7 +318,7 @@ def self_update(base_url, cert, verify):
         raise RuntimeError('Unable to download remote script, got HTTP {retcode}, expected 200 OK.'.format(
             retcode=response.status_code))
 
-    checksum = hashlib.md5(response.content).hexdigest()
+    checksum = hashlib.sha256(response.content).hexdigest()
     if response.headers.get(CLIENT_CHECKSUM_HEADER) != checksum:
         raise RuntimeError('The checksum of the script do not match the HTTP header: {checksum} != {header}'.format(
             checksum=checksum, header=response.headers.get(CLIENT_CHECKSUM_HEADER)))

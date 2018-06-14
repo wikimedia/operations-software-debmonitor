@@ -14,6 +14,7 @@ except ImportError:  # Python2
     BUILTINS = '__builtin__'
 
 
+from tests import debmonitor as tests_deb
 from tests.conftest import HOSTNAME
 
 
@@ -35,8 +36,6 @@ DEBMONITOR_SERVER = 'debmonitor.example.com'
 DEBMONITOR_BASE_URL = 'https://{server}:443'.format(server=DEBMONITOR_SERVER)
 DEBMONITOR_UPDATE_URL = '{base_url}/hosts/{hostname}/update'.format(base_url=DEBMONITOR_BASE_URL, hostname=HOSTNAME)
 DEBMONITOR_CLIENT_URL = '{base_url}/client'.format(base_url=DEBMONITOR_BASE_URL)
-DEBMONITOR_CLIENT_VERSION = '0.0.1'
-DEBMONITOR_CLIENT_CHECKSUM = '8d777f385d3dfec8815d20f7496026dc'
 DEBMONITOR_CLIENT_CONFIG = 'tests/fixtures/client.{mode}.conf'
 DEBMONITOR_CLIENT_CONFIG_OK = DEBMONITOR_CLIENT_CONFIG.format(mode='ok')
 DEBMONITOR_CLIENT_CA_BUNDLE = 'tests/fixtures/ca_bundle.crt'
@@ -414,7 +413,7 @@ def test_self_update_head_same_version(mocked_requests):
 def test_self_update_has_update_fail(mocked_requests):
     """Calling self_update() when the GET request to DebMonitor fail should raise RuntimeError."""
     mocked_requests.register_uri(
-        'HEAD', DEBMONITOR_CLIENT_URL, status_code=200, headers={cli.CLIENT_VERSION_HEADER: DEBMONITOR_CLIENT_VERSION})
+        'HEAD', DEBMONITOR_CLIENT_URL, status_code=200, headers={cli.CLIENT_VERSION_HEADER: tests_deb.CLIENT_VERSION})
     mocked_requests.register_uri('GET', DEBMONITOR_CLIENT_URL, status_code=500)
 
     with pytest.raises(RuntimeError, match='Unable to download remote script'):
@@ -426,10 +425,10 @@ def test_self_update_has_update_fail(mocked_requests):
 def test_self_update_has_update_wrong_hash(mocked_requests):
     """Calling self_update() when the checksum mismatch should raise RuntimeError."""
     mocked_requests.register_uri(
-        'HEAD', DEBMONITOR_CLIENT_URL, status_code=200, headers={cli.CLIENT_VERSION_HEADER: DEBMONITOR_CLIENT_VERSION})
-    mocked_requests.register_uri('GET', DEBMONITOR_CLIENT_URL, status_code=200, text='data',
-                                 headers={cli.CLIENT_VERSION_HEADER: DEBMONITOR_CLIENT_VERSION,
-                                          cli.CLIENT_CHECKSUM_HEADER: '000000'})
+        'HEAD', DEBMONITOR_CLIENT_URL, status_code=200, headers={cli.CLIENT_VERSION_HEADER: tests_deb.CLIENT_VERSION})
+    mocked_requests.register_uri('GET', DEBMONITOR_CLIENT_URL, status_code=200, text=tests_deb.CLIENT_BODY_DUMMY_1,
+                                 headers={cli.CLIENT_VERSION_HEADER: tests_deb.CLIENT_VERSION,
+                                          cli.CLIENT_CHECKSUM_HEADER: 'invalid'})
 
     with pytest.raises(RuntimeError, match='The checksum of the script do not match the HTTP header'):
         cli.self_update(DEBMONITOR_BASE_URL, None, True)
@@ -440,18 +439,18 @@ def test_self_update_has_update_wrong_hash(mocked_requests):
 def test_self_update_has_update_ok(mocked_requests):
     """Calling self_update() should self-update the CLI script."""
     mocked_requests.register_uri(
-        'HEAD', DEBMONITOR_CLIENT_URL, status_code=200, headers={cli.CLIENT_VERSION_HEADER: DEBMONITOR_CLIENT_VERSION})
+        'HEAD', DEBMONITOR_CLIENT_URL, status_code=200, headers={cli.CLIENT_VERSION_HEADER: tests_deb.CLIENT_VERSION})
     mocked_requests.register_uri(
-        'GET', DEBMONITOR_CLIENT_URL, status_code=200, text='data', headers={
-            cli.CLIENT_VERSION_HEADER: DEBMONITOR_CLIENT_VERSION,
-            cli.CLIENT_CHECKSUM_HEADER: DEBMONITOR_CLIENT_CHECKSUM})
+        'GET', DEBMONITOR_CLIENT_URL, status_code=200, text=tests_deb.CLIENT_BODY_DUMMY_1, headers={
+            cli.CLIENT_VERSION_HEADER: tests_deb.CLIENT_VERSION,
+            cli.CLIENT_CHECKSUM_HEADER: tests_deb.CLIENT_CHECKSUM_DUMMY_1})
 
     with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(), create=True) as mocked_open:
         cli.self_update(DEBMONITOR_BASE_URL, None, True)
 
         mocked_open.assert_called_once_with(os.path.realpath(cli.__file__), mode='w')
         mocked_handler = mocked_open()
-        mocked_handler.write.assert_called_once_with('data')
+        mocked_handler.write.assert_called_once_with(tests_deb.CLIENT_BODY_DUMMY_1)
 
     assert mocked_requests.called
 
@@ -589,11 +588,11 @@ def test_main_update_ok(mocked_getfqdn, mocked_requests, caplog):
     args = cli.parse_args(['--config', DEBMONITOR_CLIENT_CONFIG_OK, '--update'])
     mocked_requests.register_uri('POST', DEBMONITOR_UPDATE_URL, status_code=201)
     mocked_requests.register_uri(
-        'HEAD', DEBMONITOR_CLIENT_URL, status_code=200, headers={cli.CLIENT_VERSION_HEADER: DEBMONITOR_CLIENT_VERSION})
+        'HEAD', DEBMONITOR_CLIENT_URL, status_code=200, headers={cli.CLIENT_VERSION_HEADER: tests_deb.CLIENT_VERSION})
     mocked_requests.register_uri(
-        'GET', DEBMONITOR_CLIENT_URL, status_code=200, text='data', headers={
-            cli.CLIENT_VERSION_HEADER: DEBMONITOR_CLIENT_VERSION,
-            cli.CLIENT_CHECKSUM_HEADER: DEBMONITOR_CLIENT_CHECKSUM})
+        'GET', DEBMONITOR_CLIENT_URL, status_code=200, text=tests_deb.CLIENT_BODY_DUMMY_1, headers={
+            cli.CLIENT_VERSION_HEADER: tests_deb.CLIENT_VERSION,
+            cli.CLIENT_CHECKSUM_HEADER: tests_deb.CLIENT_CHECKSUM_DUMMY_1})
     _reset_apt_caches()
 
     with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
@@ -602,7 +601,7 @@ def test_main_update_ok(mocked_getfqdn, mocked_requests, caplog):
         assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
         assert mock.call(os.path.realpath(cli.__file__), mode='w') in mocked_open.mock_calls
         mocked_handler = mocked_open()
-        mocked_handler.write.assert_called_once_with('data')
+        mocked_handler.write.assert_called_once_with(tests_deb.CLIENT_BODY_DUMMY_1)
 
     assert mocked_requests.called
     mocked_getfqdn.assert_called_once_with()
