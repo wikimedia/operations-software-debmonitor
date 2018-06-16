@@ -10,22 +10,24 @@
   </dd>
   {% for os, data in os_versions.items %}
   <dt class="col-sm-3">
-    {{ os }} versions
-    {% if data.totals.installed %}
-    <span data-toggle="tooltip" title="Number of hosts that have this package installed">
-      <span class="badge badge-primary align-text-bottom">{{ data.totals.installed }}</span>
-    </span>
-    {% endif %}
-    {% if data.totals.upgradable %}
-    <span data-toggle="tooltip" title="Number of hosts that have this package installed and are pending an upgrade">
-      <span class="badge badge-warning align-text-bottom">{{ data.totals.upgradable }}</span>
-    </span>
-    {% endif %}
-    {% if data.totals.security %}
-    <span data-toggle="tooltip" title="Number of hosts that have this package installed and are pending a security upgrade">
-      <span class="badge badge-danger align-text-bottom">{{ data.totals.security }}</span>
-    </span>
-    {% endif %}
+    <div class="text-nowrap">
+      {{ os }} versions
+      {% if data.totals.installed %}
+      <span data-toggle="tooltip" title="Number of hosts that have this package installed">
+        <span class="badge badge-primary align-text-bottom">{{ data.totals.installed }}</span>
+      </span>
+      {% endif %}
+      {% if data.totals.upgradable %}
+      <span data-toggle="tooltip" title="Number of hosts that have this package installed and are pending an upgrade">
+        <span class="badge badge-warning align-text-bottom">{{ data.totals.upgradable }}</span>
+      </span>
+      {% endif %}
+      {% if data.totals.security %}
+      <span data-toggle="tooltip" title="Number of hosts that have this package installed and are pending a security upgrade">
+        <span class="badge badge-danger align-text-bottom">{{ data.totals.security }}</span>
+      </span>
+      {% endif %}
+    </div>
   </dt>
   <dd class="col-sm-9">
       {% for version, counters in data.versions.items %}
