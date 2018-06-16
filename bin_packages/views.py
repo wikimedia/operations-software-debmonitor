@@ -16,14 +16,30 @@ from hosts.models import HostPackage, SECURITY_UPGRADE
 def index(request):
     """Binary packages list page."""
     packages = Package.objects.annotate(
-        hosts_count=Count('installed_hosts', distinct=True),
-        upgrades_count=Count('upgradable_hosts', distinct=True),
         versions_count=Count('versions', distinct=True),
         os_list=DistinctGroupConcat('versions__os__name'))
 
-    upgrades = HostPackage.objects.select_related(None).filter(upgrade_type=SECURITY_UPGRADE).values(
-        'package').annotate(Count('host', distinct=True)).order_by('package')
-    security_upgrades = {upgrade['package']: upgrade['host__count'] for upgrade in upgrades}
+    # Get all the additional annotations separately for query optimization purposes
+    package_annotations = defaultdict(lambda: defaultdict(int))
+    hosts_counts = Package.objects.select_related(None).values('id').annotate(
+        hosts_count=Count('installed_hosts', distinct=True))
+    for package in hosts_counts:
+        package_annotations[package['id']]['hosts_count'] = package['hosts_count']
+
+    upgrades_count = Package.objects.select_related(None).values('id').annotate(
+        upgrades_count=Count('upgradable_hosts', distinct=True))
+    for package in upgrades_count:
+        package_annotations[package['id']]['upgrades_count'] = package['upgrades_count']
+
+    security_count = HostPackage.objects.select_related(None).filter(upgrade_type=SECURITY_UPGRADE).values(
+        'package').annotate(security_count=Count('host', distinct=True)).order_by('package')
+    for package in security_count:
+        package_annotations[package['package']]['security_count'] = package['security_count']
+
+    # Insert all the annotated data back into the package objects for easy access in the templates
+    for package in packages:
+        for annotation in ('hosts_count', 'upgrades_count', 'security_count'):
+            setattr(package, annotation, package_annotations[package.id][annotation])
 
     table_headers = [
         {'title': 'Package', 'tooltip': 'Name of the binary package', 'badges': [
@@ -48,7 +64,6 @@ def index(request):
         'datatables_page_length': 50,
         'packages': packages,
         'section': 'bin_packages',
-        'security_upgrades': security_upgrades,
         'subtitle': '',
         'table_headers': table_headers,
         'title': 'Binary Packages',
