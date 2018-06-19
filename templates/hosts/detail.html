@@ -3,7 +3,7 @@
 {% block summary %}
 <dl class="row">
   <dt class="col-sm-3">Running kernel</dt>
-  <dd class="col-sm-9"><a href="{% url 'kernels:detail' host.running_kernel_slug %}">{{ host.running_kernel }}</a></dd>
+  <dd class="col-sm-9"><a href="{% url 'kernels:detail' host.os.id host.kernel.slug %}">{{ host.kernel.name }}</a></dd>
   <dt class="col-sm-3">OS</dt>
   <dd class="col-sm-9">{{ host.os.name }}</dd>
   <dt class="col-sm-3">Last update</dt>

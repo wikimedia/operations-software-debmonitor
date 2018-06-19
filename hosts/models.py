@@ -1,9 +1,9 @@
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils.text import slugify
 
 from bin_packages.models import Package, PackageVersion
 from debmonitor import SelectManager
+from kernels.models import KernelVersion
 from src_packages.models import OS
 
 
@@ -17,8 +17,8 @@ class Host(models.Model):
     name = models.CharField(max_length=255, unique=True, help_text='Hostname.')
     os = models.ForeignKey(OS, on_delete=models.PROTECT, related_name='+', verbose_name='operating system',
                            help_text='Operating system.')
-    running_kernel = models.CharField(max_length=255, help_text='Running kernel version.')
-    running_kernel_slug = models.SlugField(max_length=255, help_text='Running kernel version URL slug.')
+    kernel = models.ForeignKey(KernelVersion, on_delete=models.PROTECT, related_name='hosts',
+                               verbose_name='running kernel', help_text='Running kernel.')
     packages = models.ManyToManyField(
         Package, related_name='+', through='HostPackage', through_fields=('host', 'package'),
         db_index=True, blank=True, verbose_name='binary packages', help_text='Binary packages installed on this host.')
@@ -50,11 +50,6 @@ class Host(models.Model):
     def __str__(self):
         """Model representation."""
         return self.name
-
-    def save(self, *args, **kwargs):
-        """Override parent method to auto-calculate the running kernel slug."""
-        self.running_kernel_slug = slugify(self.running_kernel)
-        super().save(*args, **kwargs)
 
     @classmethod
     def _check_m2m_through_same_relationship(cls):

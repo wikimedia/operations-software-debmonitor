@@ -10,7 +10,7 @@ urlpatterns = [
     path('', views.index, name='index'),
     path('client', views.client, name='client'),
     path('hosts/', include('hosts.urls')),
-    path('kernels/', include('hosts.kernel_urls')),
+    path('kernels/', include('kernels.urls')),
     path('packages/', include('bin_packages.urls')),
     path('source-packages/', include('src_packages.urls')),
     path('admin/', admin.site.urls),

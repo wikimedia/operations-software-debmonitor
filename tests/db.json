@@ -105,10 +105,9 @@
         "fields": {
             "name": "host1.example.com",
             "os": 1,
-            "running_kernel": "os1-100-1",
-            "running_kernel_slug": "os1-100-1",
+            "kernel": 1,
             "created": "2017-11-27T22:10:09.483Z",
-            "modified": "2017-11-27T22:10:09.483Z"
+            "modified": "2018-06-26T16:46:33.213Z"
         }
     },
     {
@@ -117,10 +116,9 @@
         "fields": {
             "name": "host2.example.com",
             "os": 1,
-            "running_kernel": "os1-100-1",
-            "running_kernel_slug": "os1-100-1",
+            "kernel": 1,
             "created": "2017-11-27T22:12:14.016Z",
-            "modified": "2017-11-27T22:12:14.016Z"
+            "modified": "2018-06-26T16:46:33.213Z"
         }
     },
     {
@@ -129,10 +127,9 @@
         "fields": {
             "name": "host3.example.com",
             "os": 1,
-            "running_kernel": "os1-100-1",
-            "running_kernel_slug": "os1-100-1",
+            "kernel": 1,
             "created": "2017-11-27T22:16:29.156Z",
-            "modified": "2017-11-27T22:16:29.156Z"
+            "modified": "2018-06-26T16:46:33.213Z"
         }
     },
     {
@@ -391,6 +388,17 @@
             "os": 1,
             "created": "2017-11-27T22:10:09.625Z",
             "modified": "2017-11-27T22:10:09.625Z"
+        }
+    },
+    {
+        "model": "kernels.kernelversion",
+        "pk": 1,
+        "fields": {
+            "name": "os1-100-1",
+            "slug": "os1-100-1",
+            "os": 1,
+            "created": "2018-06-26T16:46:19.832Z",
+            "modified": "2018-06-26T16:46:19.832Z"
         }
     }
 ]

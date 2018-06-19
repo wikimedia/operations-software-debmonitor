@@ -19,7 +19,7 @@ STRONGHOLD_MIDDLEWARE = 'stronghold.middleware.LoginRequiredMiddleware'
 
 @pytest.mark.skipif(sys.version_info.major < 3 or sys.version_info.major == 3 and sys.version_info.minor < 5,
                     reason='Requires Python3.5 or greater')
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='module')
 def django_db_setup(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
         call_command('loaddata', 'tests/db.json')

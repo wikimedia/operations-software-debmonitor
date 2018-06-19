@@ -1,7 +1,7 @@
 {% extends "../base_table.html" %}
 
 {% block table_body %}
-{% for host in hosts %}
+{% for host in kernel.hosts.all %}
 <tr>
   <td>
     <a href="{% url 'hosts:detail' host.name %}">{{ host.name }}</a>

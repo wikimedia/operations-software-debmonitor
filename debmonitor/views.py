@@ -10,6 +10,7 @@ import debmonitor
 from bin_packages.models import Package, PackageVersion
 from debmonitor.decorators import verify_clients
 from hosts.models import Host, HostPackage, SECURITY_UPGRADE
+from kernels.models import KernelVersion
 from src_packages.models import SrcPackage, SrcPackageVersion
 
 
@@ -42,7 +43,7 @@ def index(request):
             {'title': 'With pending upgrades', 'count': upgradable['host__count'], 'style': 'warning'},
             {'title': 'With pending security upgrades', 'count': security_upgrades['host__count'], 'style': 'danger'},
         ]},
-        {'title': 'Kernels', 'count': Host.objects.values('running_kernel_slug').distinct().count(), 'url': 'kernels',
+        {'title': 'Kernels', 'count': KernelVersion.objects.count(), 'url': 'kernels',
          'rows': []},
         {'title': 'Binary Packages', 'count': Package.objects.count(), 'url': 'bin_packages', 'rows': [
             {'title': 'With upgrades', 'count': upgradable['upgradable_package__count'], 'style': 'warning'},

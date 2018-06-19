@@ -16,6 +16,7 @@ from django.views.decorators.http import require_safe, require_POST
 from bin_packages.models import PackageVersion
 from debmonitor.decorators import verify_clients
 from hosts.models import Host, HostPackage, SECURITY_UPGRADE
+from kernels.models import KernelVersion
 from src_packages.models import OS
 
 
@@ -81,30 +82,6 @@ def index(request):
     return render(request, 'hosts/index.html', args)
 
 
-@require_safe
-def kernel_index(request):
-    """Kernels list page."""
-    kernels = Host.objects.values('running_kernel_slug', 'os__name', 'running_kernel').annotate(
-        hosts_count=Count('running_kernel_slug')).order_by('os__name', 'running_kernel_slug')
-
-    table_headers = [
-        {'title': 'OS', 'tooltip': 'Operating System'},
-        {'title': 'Kernel', 'tooltip': 'Full version of the running kernel'},
-        {'title': '# Hosts', 'tooltip': 'Number of host that are running this kernel'},
-    ]
-
-    args = {
-        'datatables_column_defs': json.dumps([{'targets': [2], 'searchable': False}]),
-        'datatables_page_length': -1,
-        'kernels': kernels,
-        'section': 'kernels',
-        'subtitle': '',
-        'table_headers': table_headers,
-        'title': 'Kernels',
-    }
-    return render(request, 'kernels/index.html', args)
-
-
 class DetailView(View):
 
     @method_decorator(verify_clients(['DELETE']))
@@ -153,24 +130,6 @@ class DetailView(View):
         return http.HttpResponse(status=204, content_type=TEXT_PLAIN)
 
 
-@require_safe
-def kernel_detail(request, slug):
-    """Kernel detail page."""
-    hosts = Host.objects.filter(running_kernel_slug=slug).values('name', 'running_kernel')
-    if not hosts:
-        raise http.Http404
-
-    args = {
-        'datatables_page_length': 50,
-        'hosts': hosts,
-        'section': 'kernels',
-        'subtitle': 'Kernel',
-        'table_headers': [{'title': 'Hostname'}],
-        'title': hosts[0]['running_kernel'],
-    }
-    return render(request, 'kernels/detail.html', args)
-
-
 @verify_clients
 @csrf_exempt
 @require_POST
@@ -211,18 +170,18 @@ def update(request, name):
 
 def _update_v1(request, name, os, payload):
     """Update API v1."""
-    running_kernel = payload['running_kernel']['version']
     start_time = timezone.now()
+    kernel, _ = KernelVersion.objects.get_or_create(name=payload['running_kernel']['version'], os=os)
 
     try:
         host = Host.objects.get(name=name)
         host.os = os
-        host.running_kernel = running_kernel
+        host.kernel = kernel
         host.save()  # Always update at least the modification time
         host_packages = {host_pkg.package.name: host_pkg for host_pkg in HostPackage.objects.filter(host=host)}
 
     except Host.DoesNotExist:
-        host = Host(name=name, os=os, running_kernel=running_kernel)
+        host = Host(name=name, os=os, kernel=kernel)
         host.save()
         host_packages = {}
         logger.info("Created Host '%s'", name)

@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'debmonitor',
     'bin_packages',
     'hosts',
+    'kernels',
     'src_packages',
 ]
 
