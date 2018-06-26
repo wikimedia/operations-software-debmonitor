@@ -90,6 +90,9 @@ AptLineV2 = namedtuple('LineV2', ['name', 'version_from', 'direction', 'version_
 AptLineV3 = namedtuple('LineV3', ['name', 'version_from', 'arch_from', 'multiarch_from', 'direction', 'version_to',
                                   'arch_to', 'multiarch_to', 'action'])
 
+logging.getLogger('requests').setLevel(logging.WARNING)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
+
 
 class AptInstalledFilter(apt.cache.Filter):
     """Filter class for python-apt to filter only installed packages."""
