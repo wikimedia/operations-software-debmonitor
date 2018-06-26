@@ -153,13 +153,21 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['console'],
+            'level': 'INFO',
         },
-    },
+        'django.server': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    }
 }
 
 if DEBMONITOR_CONFIG.get('LOG_DB_QUERIES', False):
     LOGGING['loggers']['django.db'] = {
+        'handlers': ['console'],
         'level': 'DEBUG',
+        'propagate': False,
     }
 
 # LDAP, dynamically load all overriden variables from the config
