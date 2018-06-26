@@ -620,15 +620,15 @@ def _get_payload_with_packages(params):
     if '-u' in params:
         installed = []
         upgradable = CLI_UPGRADES
-        upgrade_type = 'partial'
+        upgrade_type = 'upgradable'
     elif '-g' in params:
         installed = [{'name': 'package-name', 'version': '1.0.0-1', 'source': 'package-name'}]
         upgradable = []
-        upgrade_type = 'partial'
+        upgrade_type = 'dpkg_hook'
     elif 'empty' in params:
         installed = []
         upgradable = []
-        upgrade_type = 'partial'
+        upgrade_type = 'upgradable'
     else:
         installed = CLI_PACKAGES
         upgradable = CLI_UPGRADES

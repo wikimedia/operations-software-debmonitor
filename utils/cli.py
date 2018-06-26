@@ -79,7 +79,7 @@ import requests
 
 
 # The client version is based on the server's major.minor version plus a dedicated client-specific incremental number.
-__version__ = '0.1client2'
+__version__ = '0.1client3'
 
 SUPPORTED_API_VERSIONS = ('v1',)
 CLIENT_VERSION_HEADER = 'X-Debmonitor-Client-Version'
@@ -443,8 +443,10 @@ def run(args, input_lines=None):
     """
     hostname = socket.getfqdn()
 
-    if args.upgradable or args.dpkg_hook:
-        upgrade_type = 'partial'
+    if args.dpkg_hook:
+        upgrade_type = 'dpkg_hook'
+    elif args.upgradable:
+        upgrade_type = 'upgradable'
     else:
         upgrade_type = 'full'
 

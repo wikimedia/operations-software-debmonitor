@@ -53,7 +53,7 @@ PAYLOAD_EXISTING_NO_UPDATE = """{
 }"""
 PAYLOAD_EXISTING_UPDATE = """{
     "api_version": "v1",
-    "update_type": "partial",
+    "update_type": "upgradable",
     "os": "os1",
     "hostname": "host1.example.com",
     "running_kernel": {
@@ -241,6 +241,15 @@ def test_update_status_code_existing_update(client):
     """Updating an existing host with a correct payload with updates should return 201 Created."""
     rand = str(uuid.uuid4())
     response = client.generic('POST', EXISTING_HOST_UPDATE_URL, PAYLOAD_EXISTING_UPDATE % {'uuid': rand})
+    assert response.status_code == 201
+
+
+@pytest.mark.django_db
+def test_update_status_code_existing_update_client2(client):
+    """Updating an existing host with a payload from CLI version 0.1client2 or earlier should return 201 Created."""
+    rand = str(uuid.uuid4())
+    payload = PAYLOAD_EXISTING_UPDATE.replace('"update_type": "upgradable"', '"update_type": "partial"')
+    response = client.generic('POST', EXISTING_HOST_UPDATE_URL, payload % {'uuid': rand})
     assert response.status_code == 201
 
 
