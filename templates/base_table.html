@@ -5,7 +5,7 @@
   <thead>
     <tr>
       {% for header in table_headers %}
-      <th data-field="{{ header.title }}" data-sortable="true" class="text-nowrap"{% if forloop.first %} id="debmonitor-th1"{% endif %}>
+      <th data-field="{{ header.title }}" data-sortable="true" class="text-nowrap"{% if forloop.first and header.badges %} id="debmonitor-th1"{% endif %}>
         {% if header.badges %}
         <div class="row">
           <div class="col-md-8"{% if forloop.first %} id="debmonitor-th1-title"{% endif %}>
