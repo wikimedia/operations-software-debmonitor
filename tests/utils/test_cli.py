@@ -499,15 +499,21 @@ def test_main(params, mocked_getfqdn, mocked_requests):
     assert mocked_requests.last_request.json() == _get_payload_with_packages(params)
 
 
-def test_main_no_packages(mocked_getfqdn):
-    """Calling main() if there are no updates should success without sending any update to the DebMonitor server."""
-    args = cli.parse_args(['--config', DEBMONITOR_CLIENT_CONFIG_OK])
+def test_main_no_packages(mocked_getfqdn, mocked_requests):
+    """Calling main() if there are no updates should success sending an empty update to the DebMonitor server."""
+    args = cli.parse_args(['--config', DEBMONITOR_CLIENT_CONFIG_OK, '-u'])
+    mocked_requests.register_uri('POST', DEBMONITOR_UPDATE_URL, status_code=201)
     _reset_apt_caches(empty=True)
 
-    exit_code = cli.main(args)
+    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
+                    create=True) as mocked_open:
+        exit_code = cli.main(args)
+        assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
 
     mocked_getfqdn.assert_called_once_with()
+    assert mocked_requests.called
     assert exit_code == 0
+    assert mocked_requests.last_request.json() == _get_payload_with_packages(['empty'])
 
 
 def test_main_dry_run(mocked_getfqdn, capsys):
@@ -611,12 +617,16 @@ def test_main_update_ok(mocked_getfqdn, mocked_requests, caplog):
 
 def _get_payload_with_packages(params):
     """Given the current CLI parameters return the expected payload to be sent by DebMonitor."""
-    if params == ['-u']:
+    if '-u' in params:
         installed = []
         upgradable = CLI_UPGRADES
         upgrade_type = 'partial'
-    elif params == ['-g']:
+    elif '-g' in params:
         installed = [{'name': 'package-name', 'version': '1.0.0-1', 'source': 'package-name'}]
+        upgradable = []
+        upgrade_type = 'partial'
+    elif 'empty' in params:
+        installed = []
         upgradable = []
         upgrade_type = 'partial'
     else:

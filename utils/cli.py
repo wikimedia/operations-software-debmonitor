@@ -453,9 +453,6 @@ def run(args, input_lines=None):
     else:
         packages = get_packages(upgradable_only=args.upgradable)
 
-    if sum(len(i) for i in packages.values()) == 0:  # No packages to report
-        return
-
     payload = {
         'api_version': args.api,
         'os': get_distro_name(),
