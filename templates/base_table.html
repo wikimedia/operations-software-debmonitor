@@ -11,9 +11,9 @@
           <div class="col-md-8"{% if forloop.first %} id="debmonitor-th1-title"{% endif %}>
             <span data-toggle="tooltip" title="{{ header.tooltip }}">{{ header.title }}</span>
           </div>
-          <div class="col-md-4 px-4" style="cursor: default;">
+          <div class="col-md-4 px-4 debmonitor-badge-container">
           {% for badge in header.badges %}
-          <button id="customSort{{ forloop.counter }}" type="button" class="btn btn-sm btn-{{ badge.style }} px-1 py-0 align-text-bottom {% if forloop.last %}active{% else %}text-secondary{% endif %}" data-toggle="tooltip" data-trigger="hover" title="{{ badge.tooltip }}" aria-pressed="true" style="font-size: 10px;">&darr;</button>
+          <button id="customSort{{ forloop.counter }}" type="button" class="btn btn-sm btn-{{ badge.style }} px-1 py-0 align-text-bottom {% if forloop.last %}active{% else %}text-secondary{% endif %} debmonitor-badge" data-toggle="tooltip" data-trigger="hover" title="{{ badge.tooltip }}" aria-pressed="true">&darr;</button>
           {% endfor %}
           </div>
         {% else %}

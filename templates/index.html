@@ -3,7 +3,7 @@
 {% block summary %}
 <div class="card-columns">
   {% for counter in counters %}
-  <div class="card bg-light" style="max-width: 25rem;">
+  <div class="card bg-light debmonitor-card-small">
     <h5 class="card-header">
       <a href="{% url counter.url|add:':index' %}">{{ counter.title }}</a>
       <span class="badge badge-{% if counter.count > 0 %}primary{% else %}secondary{% endif %} align-text-bottom">{{ counter.count }}</span>
@@ -24,7 +24,7 @@
 {% block content %}
 <hr class="bg-dark w-50"/>
 <div class="card-columns">
-  <div class="card bg-light" style="max-width: 25rem;">
+  <div class="card bg-light debmonitor-card-small">
     <div class="card-body">
       <h6 class="card-title">Totals</h6>
       {% for total in totals %}
@@ -35,7 +35,7 @@
       {% endfor %}
     </div>
   </div>
-  <div class="card bg-light" style="max-width: 25rem;">
+  <div class="card bg-light debmonitor-card-small">
     <div class="card-body">
       <h6 class="card-title">Host updates</h6>
         {% for update in updates %}
