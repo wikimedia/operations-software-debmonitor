@@ -199,7 +199,7 @@ if DEBMONITOR_CONFIG.get('LDAP', {}):
             setattr(module, 'AUTH_LDAP_' + key, value)
 
 # Content-Security-Policy
-CSP_DEFAULT_SRC = ("'self'",)
+CSP_DEFAULT_SRC = ("'self'", "'unsafe-inline'")  # TODO: remove unsafe-inline once more widely supported by browsers.
 CSP_IMG_SRC = ("'self'", 'data:')
 CSP_OBJECT_SRC = ("'none'",)
 CSP_FRAME_SRC = ("'none'",)
