@@ -14,7 +14,7 @@ case "$1" in
     # management system), ingest all packages
     if [[ -e /etc/debmonitor.conf ]]; then
         if grep -Eq '^server=.+' /etc/debmonitor.conf ; then
-            su - debmonitor -c '/usr/bin/debmonitor-client' || true
+            /usr/bin/debmonitor-client-unpriv || true
         fi
     fi
 
