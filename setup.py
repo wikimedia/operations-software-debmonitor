@@ -10,6 +10,7 @@ with open('README.rst', 'r') as readme:
 install_requires = [
     'Django>=2.0,<2.1.0a0',
     'django-stronghold==0.3.0',
+    'django-csp==3.4',
 ]
 
 # Extra dependencies

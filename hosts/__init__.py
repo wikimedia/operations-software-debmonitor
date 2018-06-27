@@ -43,7 +43,7 @@ def verify_clients(request, hostname=None):
         return
 
     ssl_verify = request.META.get(SSL_CLIENT_VERIFY_HEADER, '')
-    if ssl_verify != SSL_CLIENT_VERIFY_SUCCESS:  # Verify that the client had a validate certificate
+    if ssl_verify != SSL_CLIENT_VERIFY_SUCCESS:  # Verify that the client has a valid certificate
         raise HostAuthError("Client certificate validation failed: '{message}'".format(
             message=ssl_verify))
 

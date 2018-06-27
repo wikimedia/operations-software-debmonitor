@@ -1,6 +1,8 @@
 import json
 import logging
 
+from collections import defaultdict
+
 from django import http
 from django.db.models import BooleanField, Case, Count, When
 from django.shortcuts import get_object_or_404, render
@@ -27,12 +29,29 @@ logger = logging.getLogger(__name__)
 @require_safe
 def index(request):
     """Hosts list page."""
-    hosts = Host.objects.annotate(packages_count=Count('packages', distinct=True),
-                                  upgrades_count=Count('upgradable_packages', distinct=True))
+    hosts = Host.objects.all()
 
-    upgrades = HostPackage.objects.select_related(None).filter(upgrade_type=SECURITY_UPGRADE).values(
-        'host').annotate(Count('package', distinct=True)).order_by('host')
-    security_upgrades = {upgrade['host']: upgrade['package__count'] for upgrade in upgrades}
+    # Get all the additional annotations separately for query optimization purposes
+    host_annotations = defaultdict(lambda: defaultdict(int))
+    packages_count = Host.objects.select_related(None).values('id').annotate(
+        packages_count=Count('packages', distinct=True))
+    for host in packages_count:
+        host_annotations[host['id']]['packages_count'] = host['packages_count']
+
+    upgrades_count = Host.objects.select_related(None).values('id').annotate(
+        upgrades_count=Count('upgradable_packages', distinct=True))
+    for host in upgrades_count:
+        host_annotations[host['id']]['upgrades_count'] = host['upgrades_count']
+
+    security_count = HostPackage.objects.select_related(None).filter(upgrade_type=SECURITY_UPGRADE).values(
+        'host').annotate(security_count=Count('package', distinct=True)).order_by('host')
+    for host in security_count:
+        host_annotations[host['host']]['security_count'] = host['security_count']
+
+    # Insert all the annotated data back into the package objects for easy access in the templates
+    for host in hosts:
+        for annotation in ('packages_count', 'upgrades_count', 'security_count'):
+            setattr(host, annotation, host_annotations[host.id][annotation])
 
     table_headers = [
         {'title': 'Hostname', 'badges': [
@@ -58,7 +77,6 @@ def index(request):
         'datatables_page_length': 50,
         'hosts': hosts,
         'section': 'hosts',
-        'security_upgrades': security_upgrades,
         'subtitle': '',
         'table_headers': table_headers,
         'title': 'Hosts',

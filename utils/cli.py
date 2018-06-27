@@ -79,7 +79,7 @@ import requests
 
 
 # The client version is based on the server's major.minor version plus a dedicated client-specific incremental number.
-__version__ = '0.1client2'
+__version__ = '0.1client3'
 
 SUPPORTED_API_VERSIONS = ('v1',)
 CLIENT_VERSION_HEADER = 'X-Debmonitor-Client-Version'
@@ -89,6 +89,9 @@ logger = logging.getLogger('debmonitor')
 AptLineV2 = namedtuple('LineV2', ['name', 'version_from', 'direction', 'version_to', 'action'])
 AptLineV3 = namedtuple('LineV3', ['name', 'version_from', 'arch_from', 'multiarch_from', 'direction', 'version_to',
                                   'arch_to', 'multiarch_to', 'action'])
+
+logging.getLogger('requests').setLevel(logging.WARNING)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 
 class AptInstalledFilter(apt.cache.Filter):
@@ -440,8 +443,10 @@ def run(args, input_lines=None):
     """
     hostname = socket.getfqdn()
 
-    if args.upgradable or args.dpkg_hook:
-        upgrade_type = 'partial'
+    if args.dpkg_hook:
+        upgrade_type = 'dpkg_hook'
+    elif args.upgradable:
+        upgrade_type = 'upgradable'
     else:
         upgrade_type = 'full'
 
@@ -449,9 +454,6 @@ def run(args, input_lines=None):
         packages = parse_dpkg_hook(input_lines)
     else:
         packages = get_packages(upgradable_only=args.upgradable)
-
-    if sum(len(i) for i in packages.values()) == 0:  # No packages to report
-        return
 
     payload = {
         'api_version': args.api,

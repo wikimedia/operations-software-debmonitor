@@ -52,6 +52,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'csp.middleware.CSPMiddleware',
 ]
 
 if DEBMONITOR_CONFIG.get('REQUIRE_LOGIN', False):
@@ -74,6 +75,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'csp.context_processors.nonce',
                 'hosts.context.security_upgrade',
             ],
         },
@@ -151,13 +153,21 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['console'],
+            'level': 'INFO',
         },
-    },
+        'django.server': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    }
 }
 
 if DEBMONITOR_CONFIG.get('LOG_DB_QUERIES', False):
     LOGGING['loggers']['django.db'] = {
+        'handlers': ['console'],
         'level': 'DEBUG',
+        'propagate': False,
     }
 
 # LDAP, dynamically load all overriden variables from the config
@@ -187,3 +197,14 @@ if DEBMONITOR_CONFIG.get('LDAP', {}):
             AUTH_LDAP_GLOBAL_OPTIONS = {getattr(ldap, opt_name): opt_value for opt_name, opt_value in value.items()}
         else:
             setattr(module, 'AUTH_LDAP_' + key, value)
+
+# Content-Security-Policy
+CSP_DEFAULT_SRC = ("'self'",)
+CSP_IMG_SRC = ("'self'", 'data:')
+CSP_OBJECT_SRC = ("'none'",)
+CSP_FRAME_SRC = ("'none'",)
+CSP_FONT_SRC = ("'self'", 'data:')
+CSP_BASE_URI = ("'self'",)
+CSP_FRAME_ANCESTORS = ("'none'",)
+CSP_REQUIRE_SRI_FOR = ('script', 'style')
+CSP_BLOCK_ALL_MIXED_CONTENT = True
