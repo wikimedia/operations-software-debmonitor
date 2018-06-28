@@ -221,6 +221,7 @@ def _update_v1(request, name, os, payload):
         logger.info("Created Host '%s'", name)
 
     existing_not_updated = []
+    existing_upgradable_not_updated = []
 
     installed = payload.get('installed', [])
     for item in installed:
@@ -238,15 +239,31 @@ def _update_v1(request, name, os, payload):
 
     upgradable = payload.get('upgradable', [])
     for item in upgradable:
-        _process_upgradable(host, os, host_packages, existing_not_updated, item)
+        _process_upgradable(host, os, host_packages, existing_upgradable_not_updated, item)
 
     logger.info("Tracked %d upgradable packages for host '%s'", len(upgradable), name)
 
     if payload['update_type'] == 'full':
-        # Delete orphaned entries based on the modification datetime and the list of already up-to-date IDs
-        res = HostPackage.objects.filter(host=host, modified__lt=start_time).exclude(
-            pk__in=existing_not_updated).delete()
-        logger.info("Deleted %d HostPackage orphaned entries for host '%s'", res[0], name)
+        _garbage_collection(host, name, start_time, existing_not_updated, existing_upgradable_not_updated)
+
+
+def _garbage_collection(host, name, start_time, existing_not_updated, existing_upgradable_not_updated):
+    # Delete orphaned entries based on the modification datetime and the list of already up-to-date IDs
+    res = HostPackage.objects.filter(host=host, modified__lt=start_time).exclude(pk__in=existing_not_updated).delete()
+    logger.info("Deleted %d HostPackage orphaned entries for host '%s'", res[0], name)
+
+    # Cleanup orphaned upgrades based on the modification datetime and the list of already up-to-date IDs
+    host_packages = HostPackage.objects.filter(
+        host=host, modified__lt=start_time, upgradable_package__isnull=False).exclude(
+        pk__in=existing_upgradable_not_updated)
+
+    for host_package in host_packages:
+        host_package.upgradable_package = None
+        host_package.upgradable_version = None
+        host_package.upgrade_type = None
+        host_package.save()
+
+    logger.info("Cleaned %d HostPackage upgradable info for host '%s'", len(host_packages), name)
 
 
 def _process_installed(host, os, host_packages, existing_not_updated, item):
@@ -269,19 +286,26 @@ def _process_installed(host, os, host_packages, existing_not_updated, item):
             host=host, package=package_version.package, package_version=package_version)
 
 
-def _process_upgradable(host, os, host_packages, existing_not_updated, item):
+def _process_upgradable(host, os, host_packages, existing_upgradable_not_updated, item):
     """Process an upgradable package item."""
     existing = host_packages.get(item['name'], None)
 
     if existing is not None:
         if existing.upgradable_package is not None and existing.upgradable_version.version == item['version_to']:
-            existing_not_updated.append(existing.pk)
+            existing_upgradable_not_updated.append(existing.pk)
             return  # Already up-to-date
 
         upgradable_version, _ = PackageVersion.objects.get_or_create(
             os=os, version=item['version_to'], host_package=existing, **item)
-        existing.upgradable_package = upgradable_version.package
-        existing.upgradable_version = upgradable_version
+
+        if existing.package_version == upgradable_version:  # The package has been already upgraded
+            existing.upgradable_package = None
+            existing.upgradable_version = None
+            existing.upgrade_type = None
+        else:
+            existing.upgradable_package = upgradable_version.package
+            existing.upgradable_version = upgradable_version
+
         existing.save()
     else:
         installed_version, _ = PackageVersion.objects.get_or_create(os=os, version=item['version_from'], **item)
