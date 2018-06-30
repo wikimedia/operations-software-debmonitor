@@ -7,6 +7,8 @@ from django import http
 from django.db.models import BooleanField, Case, Count, When
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_safe, require_POST
 
@@ -107,37 +109,50 @@ def kernel_index(request):
     return render(request, 'kernels/index.html', args)
 
 
-@require_safe
-def detail(request, name):
-    """Host detail page."""
-    host = get_object_or_404(Host.objects.filter(name=name))
-    host_packages = HostPackage.objects.filter(host=host).annotate(
-        has_upgrade=Case(
-            When(upgradable_version__isnull=False, then=True),
-            default=False,
-            output_field=BooleanField())
-        ).order_by('-has_upgrade', '-upgrade_type', 'package__name')
+class DetailView(View):
 
-    table_headers = [
-        {'title': 'Package', 'tooltip': 'Name of the binary package'},
-        {'title': 'Version', 'tooltip': 'Installed version of this binary package'},
-        {'title': 'Upgradable to', 'tooltip': 'Version of this binary package the host can upgrade it to'},
-        {'title': 'Upgrade Type'},
-    ]
+    @method_decorator(verify_clients(['DELETE']))
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
 
-    args = {
-        'datatables_column_defs': json.dumps(
-            [{'targets': [3], 'visible': False}, {'targets': [1, 2], 'orderable': False}]),
-        'datatables_page_length': -1,
-        'host': host,
-        'host_packages': host_packages,
-        'section': 'hosts',
-        'subtitle': 'Host',
-        'table_headers': table_headers,
-        'title': host.name,
-        'upgrades_column': 2,
-    }
-    return render(request, 'hosts/detail.html', args)
+    def get(self, request, name):
+        """Host detail page."""
+        host = get_object_or_404(Host.objects.filter(name=name))
+
+        host_packages = HostPackage.objects.filter(host=host).annotate(
+            has_upgrade=Case(
+                When(upgradable_version__isnull=False, then=True),
+                default=False,
+                output_field=BooleanField())
+            ).order_by('-has_upgrade', '-upgrade_type', 'package__name')
+
+        table_headers = [
+            {'title': 'Package', 'tooltip': 'Name of the binary package'},
+            {'title': 'Version', 'tooltip': 'Installed version of this binary package'},
+            {'title': 'Upgradable to', 'tooltip': 'Version of this binary package the host can upgrade it to'},
+            {'title': 'Upgrade Type'},
+        ]
+
+        args = {
+            'datatables_column_defs': json.dumps(
+                [{'targets': [3], 'visible': False}, {'targets': [1, 2], 'orderable': False}]),
+            'datatables_page_length': -1,
+            'host': host,
+            'host_packages': host_packages,
+            'section': 'hosts',
+            'subtitle': 'Host',
+            'table_headers': table_headers,
+            'title': host.name,
+            'upgrades_column': 2,
+        }
+        return render(request, 'hosts/detail.html', args)
+
+    def delete(self, request, name):
+        host = get_object_or_404(Host.objects.filter(name=name))
+        host.delete()
+
+        return http.HttpResponse(status=204, content_type=TEXT_PLAIN)
 
 
 @require_safe

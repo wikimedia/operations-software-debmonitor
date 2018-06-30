@@ -8,11 +8,12 @@ from django.urls import resolve, reverse
 
 from debmonitor import middleware
 from hosts import views
-from tests.conftest import setup_auth_settings, validate_status_code
+from hosts.models import Host, HostPackage
+from tests.conftest import HOSTNAME, setup_auth_settings, validate_status_code
 
 
 INDEX_URL = '/hosts/'
-EXISTING_HOST_URL = INDEX_URL + 'host1.example.com'
+EXISTING_HOST_URL = INDEX_URL + HOSTNAME
 EXISTING_HOST_UPDATE_URL = EXISTING_HOST_URL + '/update'
 MISSING_HOST_URL = INDEX_URL + 'non_existing_host.example.com'
 PAYLOAD_NEW_OK = """{
@@ -117,7 +118,7 @@ def test_index_view_function():
 
 def test_detail_reverse_url_existing():
     """Reversing an existing host detail page URL name should return the correct URL."""
-    url = reverse('hosts:detail', kwargs={'name': 'host1.example.com'})
+    url = reverse('hosts:detail', kwargs={'name': HOSTNAME})
     assert url == EXISTING_HOST_URL
 
 
@@ -143,10 +144,36 @@ def test_detail_status_code_missing(client, settings, require_login, verify_clie
     validate_status_code(response, require_login, default=404)
 
 
-def test_detail_view_function():
-    """Resolving the URL for the host detail page should return the correct view."""
-    view = resolve(EXISTING_HOST_URL)
-    assert view.func is views.detail
+@pytest.mark.django_db
+def test_detail_delete_status_code_existing(client, settings, require_login, verify_clients):
+    """Deleting an existing host should return a 204 No Content, if authenticated."""
+    setup_auth_settings(settings, require_login, verify_clients)
+    # Get an existing host and its packages
+    host = Host.objects.get(name=HOSTNAME)
+    host_packages = HostPackage.objects.filter(host=host)
+    assert host is not None
+    assert len(host_packages) > 0
+
+    response = client.delete(EXISTING_HOST_URL)
+    validate_status_code(response, require_login, verify_clients=verify_clients, default=204)
+
+    if response.status_code == 204:  # The host and all its packages were deleted
+        assert len(HostPackage.objects.filter(host=host.id)) == 0
+        with pytest.raises(Host.DoesNotExist, match='Host matching query does not exist'):
+            Host.objects.get(name=HOSTNAME)
+    else:  # Nothing was changed
+        assert host == Host.objects.get(name=HOSTNAME)
+        assert list(host_packages) == list(HostPackage.objects.filter(host=host))
+        if response.status_code == 403:
+            assert 'Client certificate validation failed' in response.content.decode('utf-8')
+
+
+@pytest.mark.django_db
+def test_detail_delete_status_code_missing(client, settings, require_login, verify_clients):
+    """Trying to delete a missing host should return a 404 Not Found, if authenticated."""
+    setup_auth_settings(settings, require_login, verify_clients)
+    response = client.delete(MISSING_HOST_URL)
+    validate_status_code(response, require_login, verify_clients=verify_clients, default=404)
 
 
 def test_update_reverse_url_existing():
