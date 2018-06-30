@@ -35,6 +35,8 @@ $(document).ready(function() {
         'aPaginationLengths': [50,100,500],
         'deferRender': true,
         'fixedHeader': true,
+        'stateSave': true,
+        'stateDuration': -1,  // Use browser's sessionStorage.
         {% if datatables_page_length %}
         'pageLength': {{ datatables_page_length }},
         {% endif %}
@@ -42,6 +44,39 @@ $(document).ready(function() {
             $('#debmonitor-table').removeClass('hide-loading');
             {% if custom_sort %}
             $('#customSort3').addClass('active').removeClass('text-secondary');
+            {% endif %}
+
+            {% if upgrades_column %}
+            $('#debmonitor-table_wrapper > div.row:first > div').prop('class', 'col-sm-12 col-md-4')
+            $('<div class="col-sm-12 col-md-4 text-left"> \
+              <select class="custom-select" id="customFilterSelect"> \
+                <option value="0" selected>Show all packages</option> \
+                <option value="1">Show only upgradable packages</option> \
+                <option value="2">Show only security upgrades</option> \
+              </select> \
+            </div>').insertAfter('#debmonitor-table_wrapper > div.row:first > div:first');
+
+            var api = new $.fn.dataTable.Api(settings);
+            var state = api.state.loaded();
+            if (state && state.customFilterSelect) {
+                $('#customFilterSelect').val(state.customFilterSelect).change();
+            }
+
+            $('#customFilterSelect').change(function() {
+                switch(this.value) {
+                    case "1":
+                        table.search('').columns().search('');
+                        table.columns({{ upgrades_column }}).search('.', true, false).draw();
+                        break;
+                    case "2":
+                        table.search('').columns().search('');
+                        table.columns({{ upgrades_column }} + 1).search('{{ security_upgrade }}', false, false).draw();
+                        break;
+                    default:
+                        table.search('').columns().search('').draw();
+                        break;
+                }
+            });
             {% endif %}
         },
         'language': {'search': 'Filter:'},
@@ -116,34 +151,15 @@ $(document).ready(function() {
             });
         },
         {% endif %}
-    });
 
-    {% if upgrades_column %}
-    $('#debmonitor-table_wrapper > div.row:first > div').prop('class', 'col-sm-12 col-md-4')
-    $('<div class="col-sm-12 col-md-4 text-left"> \
-      <select class="custom-select" id="customFilterSelect"> \
-        <option selected>Show all packages</option> \
-        <option value="1">Show only upgradable packages</option> \
-        <option value="2">Show only security upgrades</option> \
-      </select> \
-    </div>').insertAfter("#debmonitor-table_wrapper > div.row:first > div:first");
-
-    $('#customFilterSelect').change(function() {
-        switch(this.value) {
-            case "1":
-                table.search('').columns().search('');
-                table.columns({{ upgrades_column }}).search('.', true, false).draw();
-                break;
-            case "2":
-                table.search('').columns().search('');
-                table.columns({{ upgrades_column }} + 1).search('{{ security_upgrade }}', false, false).draw();
-                break;
-            default:
-                table.search('').columns().search('').draw();
-                break;
-        }
+        {% if upgrades_column %}
+        'stateSaveParams': function (settings, data) {
+            if ($('#customFilterSelect').length == 1) {
+                data.customFilterSelect = $('#customFilterSelect').val();
+            }
+        },
+        {% endif %}
     });
-    {% endif %}
 
     {% if custom_sort %}
     $('#customSort1').click(function(event) {
