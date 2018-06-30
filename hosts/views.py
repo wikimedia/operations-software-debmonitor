@@ -4,6 +4,7 @@ import logging
 from collections import defaultdict
 
 from django import http
+from django.conf import settings
 from django.db.models import BooleanField, Case, Count, When
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
@@ -138,6 +139,8 @@ class DetailView(View):
             'datatables_column_defs': json.dumps(
                 [{'targets': [3], 'visible': False}, {'targets': [1, 2], 'orderable': False}]),
             'datatables_page_length': -1,
+            'external_links': {key: value.format(fqdn=host.name, hostname=host.name.split('.')[0])
+                               for key, value in settings.DEBMONITOR_HOST_EXTERNAL_LINKS.items()},
             'host': host,
             'host_packages': host_packages,
             'section': 'hosts',
