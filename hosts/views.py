@@ -9,10 +9,9 @@ from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_safe, require_POST
-from stronghold.decorators import public
 
 from bin_packages.models import PackageVersion
-from hosts import HostAuthError, verify_clients
+from debmonitor.decorators import verify_clients
 from hosts.models import Host, HostPackage, SECURITY_UPGRADE
 from src_packages.models import OS
 
@@ -159,16 +158,11 @@ def kernel_detail(request, slug):
     return render(request, 'kernels/detail.html', args)
 
 
+@verify_clients
 @csrf_exempt
 @require_POST
-@public
 def update(request, name):
     """Update a host and all it's related information from a JSON."""
-    try:
-        verify_clients(request, hostname=name)
-    except HostAuthError as e:
-        return http.HttpResponseForbidden(e, content_type=TEXT_PLAIN)
-
     if not request.body:
         return http.HttpResponseBadRequest("Empty POST, expected JSON string: {req}".format(
             req=request), content_type=TEXT_PLAIN)

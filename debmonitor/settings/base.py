@@ -54,6 +54,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'csp.middleware.CSPMiddleware',
+    'debmonitor.middleware.AuthHostMiddleware',
 ]
 
 if DEBMONITOR_CONFIG.get('REQUIRE_LOGIN', False):

@@ -3,6 +3,7 @@ import pytest
 from django.urls import resolve, reverse
 
 from hosts import views
+from tests.conftest import setup_auth_settings, validate_status_code
 
 
 INDEX_URL = '/kernels/'
@@ -17,10 +18,11 @@ def test_index_reverse_url():
 
 
 @pytest.mark.django_db
-def test_index_status_code(client):
-    """Requesting the kernels index page should return a 200 OK."""
+def test_index_status_code(client, settings, require_login, verify_clients):
+    """Requesting the kernels index page should return a 200 OK, if authenticated."""
+    setup_auth_settings(settings, require_login, verify_clients)
     response = client.get(INDEX_URL)
-    assert response.status_code == 200
+    validate_status_code(response, require_login)
 
 
 def test_index_view_function():
@@ -42,17 +44,19 @@ def test_detail_reverse_url_missing():
 
 
 @pytest.mark.django_db
-def test_detail_status_code_existing(client):
-    """Requesting an existing kernel detail page should return a 200 OK."""
+def test_detail_status_code_existing(client, settings, require_login, verify_clients):
+    """Requesting an existing kernel detail page should return a 200 OK, if authenticated."""
+    setup_auth_settings(settings, require_login, verify_clients)
     response = client.get(EXISTING_KERNEL_URL)
-    assert response.status_code == 200
+    validate_status_code(response, require_login)
 
 
 @pytest.mark.django_db
-def test_detail_status_code_missing(client):
-    """Requesting a missing kernel detail page should return a 404 NOT FOUND."""
+def test_detail_status_code_missing(client, settings, require_login, verify_clients):
+    """Requesting a missing kernel detail page should return a 404 NOT FOUND, if authenticated."""
+    setup_auth_settings(settings, require_login, verify_clients)
     response = client.get(MISSING_KERNEL_URL)
-    assert response.status_code == 404
+    validate_status_code(response, require_login, default=404)
 
 
 def test_detail_view_function():

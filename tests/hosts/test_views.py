@@ -6,9 +6,9 @@ import pytest
 
 from django.urls import resolve, reverse
 
-import hosts
-
+from debmonitor import middleware
 from hosts import views
+from tests.conftest import setup_auth_settings, validate_status_code
 
 
 INDEX_URL = '/hosts/'
@@ -102,10 +102,11 @@ def test_index_reverse_url():
 
 
 @pytest.mark.django_db
-def test_index_status_code(client):
-    """Requesting the hosts index page should return a 200 OK."""
+def test_index_status_code(client, settings, require_login, verify_clients):
+    """Requesting the hosts index page should return a 200 OK, if authenticated."""
+    setup_auth_settings(settings, require_login, verify_clients)
     response = client.get(INDEX_URL)
-    assert response.status_code == 200
+    validate_status_code(response, require_login)
 
 
 def test_index_view_function():
@@ -127,17 +128,19 @@ def test_detail_reverse_url_missing():
 
 
 @pytest.mark.django_db
-def test_detail_status_code_existing(client):
-    """Requesting an existing host detail page should return a 200 OK."""
+def test_detail_status_code_existing(client, settings, require_login, verify_clients):
+    """Requesting an existing host detail page should return a 200 OK, if authenticated."""
+    setup_auth_settings(settings, require_login, verify_clients)
     response = client.get(EXISTING_HOST_URL)
-    assert response.status_code == 200
+    validate_status_code(response, require_login)
 
 
 @pytest.mark.django_db
-def test_detail_status_code_missing(client):
-    """Requesting a missing host detail page should return a 404 NOT FOUND."""
+def test_detail_status_code_missing(client, settings, require_login, verify_clients):
+    """Requesting a missing host detail page should return a 404 NOT FOUND, if authenticated."""
+    setup_auth_settings(settings, require_login, verify_clients)
     response = client.get(MISSING_HOST_URL)
-    assert response.status_code == 404
+    validate_status_code(response, require_login, default=404)
 
 
 def test_detail_view_function():
@@ -158,22 +161,25 @@ def test_update_view_function():
     assert view.func is views.update
 
 
-def test_update_status_code_no_post(client):
-    """Trying to update an host without a POST content should return 400 Bad Request."""
+def test_update_status_code_no_post(client, settings, require_login, verify_clients):
+    """Trying to update an host without a POST content should return 400 Bad Request, if authenticated."""
+    setup_auth_settings(settings, require_login, verify_clients)
     response = client.generic('POST', EXISTING_HOST_UPDATE_URL)
-    assert response.status_code == 400
+    validate_status_code(response, require_login, verify_clients=verify_clients, default=400)
 
 
-def test_update_status_code_invalid_payload(client):
-    """Trying to update an host with an invalid JSON payload should return 400 Bad Request."""
+def test_update_status_code_invalid_payload(client, settings, require_login, verify_clients):
+    """Trying to update an host with an invalid JSON payload should return 400 Bad Request, if authenticated."""
+    setup_auth_settings(settings, require_login, verify_clients)
     response = client.generic('POST', EXISTING_HOST_UPDATE_URL, 'invalid_json')
-    assert response.status_code == 400
+    validate_status_code(response, require_login, verify_clients=verify_clients, default=400)
 
 
-def test_update_status_code_wrong_hostname(client):
-    """Trying to update an host with a payload for a different hostname should return 400 Bad Request."""
+def test_update_status_code_wrong_hostname(client, settings, require_login, verify_clients):
+    """Trying to update an host with a payload for a different host should return 400 Bad Reques, if authenticated."""
+    setup_auth_settings(settings, require_login, verify_clients)
     response = client.generic('POST', EXISTING_HOST_UPDATE_URL, '{"hostname": "non_existing_host.example.com"}')
-    assert response.status_code == 400
+    validate_status_code(response, require_login, verify_clients=verify_clients, default=400)
 
 
 def test_update_status_code_missing_cert(client, settings):
@@ -186,7 +192,7 @@ def test_update_status_code_missing_cert(client, settings):
 def test_update_status_code_invalid_cert(client, settings):
     """Trying to update an host with an invalid wrong should return 403 Forbidden."""
     settings.DEBMONITOR_VERIFY_CLIENTS = True
-    extra = {hosts.SSL_CLIENT_VERIFY_HEADER: 'FAILED:reason'}
+    extra = {middleware.SSL_CLIENT_VERIFY_HEADER: 'FAILED:reason'}
     response = client.generic('POST', EXISTING_HOST_UPDATE_URL, PAYLOAD_EXISTING_NO_UPDATE, **extra)
     assert response.status_code == 403
     assert 'Client certificate validation failed' in response.content.decode('utf-8')
@@ -195,17 +201,19 @@ def test_update_status_code_invalid_cert(client, settings):
 def test_update_status_code_wrong_cert(client, settings):
     """Trying to update an host with a valid wrong certificate should return 403 Forbidden."""
     settings.DEBMONITOR_VERIFY_CLIENTS = True
-    extra = {hosts.SSL_CLIENT_VERIFY_HEADER: 'SUCCESS', hosts.SSL_CLIENT_SUBJECT_DN_HEADER: 'CN=host2.example.com'}
+    extra = {middleware.SSL_CLIENT_VERIFY_HEADER: 'SUCCESS',
+             middleware.SSL_CLIENT_SUBJECT_DN_HEADER: 'CN=host2.example.com'}
     response = client.generic('POST', EXISTING_HOST_UPDATE_URL, PAYLOAD_EXISTING_NO_UPDATE, **extra)
     assert response.status_code == 403
-    assert 'Unauthorized to update host' in response.content.decode('utf-8')
+    assert 'Unauthorized to modify host' in response.content.decode('utf-8')
 
 
 @pytest.mark.django_db
 def test_update_status_code_cert_ok(client, settings):
     """Trying to update an host with a valid certificate for the correct host should return 201 Created."""
     settings.DEBMONITOR_VERIFY_CLIENTS = True
-    extra = {hosts.SSL_CLIENT_VERIFY_HEADER: 'SUCCESS', hosts.SSL_CLIENT_SUBJECT_DN_HEADER: 'CN=host1.example.com'}
+    extra = {middleware.SSL_CLIENT_VERIFY_HEADER: 'SUCCESS',
+             middleware.SSL_CLIENT_SUBJECT_DN_HEADER: 'CN=host1.example.com'}
     response = client.generic('POST', EXISTING_HOST_UPDATE_URL, PAYLOAD_EXISTING_NO_UPDATE, **extra)
     assert response.status_code == 201
 
@@ -215,7 +223,8 @@ def test_update_status_code_proxy_host(client, settings):
     """Trying to update an host with a valid certificate from an allowed proxy host should return 201 Created."""
     settings.DEBMONITOR_VERIFY_CLIENTS = True
     settings.DEBMONITOR_PROXY_HOSTS = ['host2.example.com']
-    extra = {hosts.SSL_CLIENT_VERIFY_HEADER: 'SUCCESS', hosts.SSL_CLIENT_SUBJECT_DN_HEADER: 'CN=host2.example.com'}
+    extra = {middleware.SSL_CLIENT_VERIFY_HEADER: 'SUCCESS',
+             middleware.SSL_CLIENT_SUBJECT_DN_HEADER: 'CN=host2.example.com'}
     response = client.generic('POST', EXISTING_HOST_UPDATE_URL, PAYLOAD_EXISTING_NO_UPDATE, **extra)
     assert response.status_code == 201
 
