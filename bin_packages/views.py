@@ -119,7 +119,12 @@ def detail(request, name):
 
     args = {
         # The IDs are DataTable column IDs.
-        'column_grouping': {'columns': [0, 1], 'column_titles': ['OS', 'Version']},
+        'column_groups': [
+            {'column': 0, 'title': 'OS', 'css_group': 1,
+             'tooltip': 'Number of hosts that have this package installed and are running this OS'},
+            {'column': 1, 'title': 'Version', 'css_group': 2,
+             'tooltip': 'Number of hosts that have this binary package version installed and are running this OS'},
+        ],
         'default_order': json.dumps([[0, 'asc'], [1, 'asc']]),
         'datatables_column_defs': json.dumps([
             {'targets': [0, 1, 4], 'visible': False, 'sortable': False}, {'targets': [3], 'sortable': False}]),

@@ -114,7 +114,7 @@ $(document).ready(function() {
         'columnDefs': {{ datatables_column_defs|safe }},
         {% endif %}
 
-        {% if custom_sort or column_grouping %}
+        {% if custom_sort or column_groups %}
         'drawCallback': function (settings) {
             {% if custom_sort %}
             if (settings.bSorted) {
@@ -122,47 +122,31 @@ $(document).ready(function() {
             }
             {% endif %}
 
-            {% if column_grouping %}
+            {% if column_groups %}
             var api = this.api();
             var rows = api.rows({page: 'current'}).nodes();
-            var last1 = null;
-            var last2 = null;
+            var last = {};
             var counter = 0;
             var counters = [];
 
-            api.column({{ column_grouping.columns.0 }}, {page:'current'}).data().each(function (group, i) {
-                if (last1 !== group) {
+            {% for column_group in column_groups %}
+            api.column({{ column_group.column }}, {page:'current'}).data().each(function (group, i) {
+                if (last[{{ column_group.column }}] !== group) {
                     counters.push(counter);
                     $(rows).eq(i).before(
-                        '<tr class="table-group1"> \
+                        '<tr class="table-group{{ column_group.css_group }}"> \
                           <td colspan="{{ table_headers|length }}"> \
-                            {{ column_grouping.column_titles.0 }}: <span class="font-weight-bold">' +
+                            {{ column_group.title }}: <span class="font-weight-bold">' +
                             group +
-                        '</span> <span data-toggle="tooltip" title="Number of hosts that have this package installed and are running this OS"> \
+                        '</span> <span data-toggle="tooltip" title="{{ column_group.tooltip }}"> \
                          <span id="tableGroupCounter' + counters.length + '" class="badge badge-primary align-text-bottom"></span></span></td></tr>'
                     );
-                    last1 = group;
+                    last[{{ column_group.column }}] = group;
                     counter = 0;
                 }
                 counter++;
             });
-
-            api.column({{ column_grouping.columns.1 }}, {page:'current'}).data().each(function (group, i) {
-                if (last2 !== group) {
-                    counters.push(counter);
-                    $(rows).eq(i).before(
-                        '<tr class="table-group2"> \
-                          <td colspan="{{ table_headers|length }}" class="pl-4"> \
-                            {{ column_grouping.column_titles.1 }}: <span class="font-weight-bold">' +
-                            group +
-                        '</span> <span data-toggle="tooltip" title="Number of hosts that have this version installed and are running this OS"> \
-                         <span id="tableGroupCounter' + counters.length + '" class="badge badge-primary align-text-bottom"></span></span></td></tr>'
-                    );
-                    last2 = group;
-                    counter = 0;
-                }
-                counter++;
-            });
+            {% endfor %}
             counters.push(counter);
 
             $.each(counters, function(i, val) {
