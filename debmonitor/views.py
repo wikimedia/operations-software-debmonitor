@@ -1,9 +1,13 @@
+import json
 import logging
 
+from collections import namedtuple
+
 from django import http
-from django.db.models import Count, Max, Min
+from django.conf import settings
+from django.db.models import Count, F, Max, Min
 from django.shortcuts import render
-from django.views.decorators.http import require_safe
+from django.views.decorators.http import require_GET, require_safe
 
 import debmonitor
 
@@ -16,6 +20,7 @@ from src_packages.models import SrcPackage, SrcPackageVersion
 
 CLIENT_VERSION_HEADER = 'X-Debmonitor-Client-Version'
 CLIENT_CHECKSUM_HEADER = 'X-Debmonitor-Client-Checksum'
+SearchResult = namedtuple('SearchResult', ['title', 'url_name', 'results'])
 logger = logging.getLogger(__name__)
 
 
@@ -102,3 +107,42 @@ def client(request):
     response[CLIENT_CHECKSUM_HEADER] = checksum
 
     return response
+
+
+@require_GET
+def search(request):
+    search_results = []
+    query = request.GET.get('q')
+
+    if query and len(query) >= settings.DEBMONITOR_SEARCH_MIN_LENGTH:
+        search_results = [
+            SearchResult(title='Hosts', url_name='hosts:detail',
+                         results=Host.objects.filter(name__contains=query).select_related(None).values('name')),
+            SearchResult(title='Packages', url_name='bin_packages:detail',
+                         results=Package.objects.filter(name__contains=query).select_related(None).values('name')),
+            SearchResult(title='Source Packages', url_name='src_packages:detail',
+                         results=SrcPackage.objects.filter(name__contains=query).select_related(None).values('name')),
+            SearchResult(title='Kernels', url_name='kernels:detail',
+                         results=KernelVersion.objects.filter(name__contains=query).select_related(None)),
+            SearchResult(title='Package Versions', url_name='bin_packages:detail',
+                         results=PackageVersion.objects.filter(version__contains=query).select_related(
+                            'package').annotate(name=F('package__name')).values('name', 'version', 'os__name')),
+            SearchResult(title='Source Package Versions', url_name='src_packages:detail',
+                         results=SrcPackageVersion.objects.filter(version__contains=query).select_related(
+                            'src_package').annotate(name=F('src_package__name')).values('name', 'version', 'os__name')),
+        ]
+
+    args = {
+        # The IDs are DataTable column IDs.
+        'column_groups': [
+            {'column': 0, 'title': 'Type', 'css_group': 1, 'tooltip': 'Number of objects of this type found'}],
+        'default_order': json.dumps([[0, 'asc']]),
+        'datatables_column_defs': json.dumps([{'targets': [0], 'visible': False, 'sortable': False}]),
+        'datatables_page_length': 50,
+        'subtitle': query,
+        'table_headers': [{'title': 'Type'}, {'title': 'Name'}],
+        'title': 'Search Results',
+        'search_results': search_results,
+    }
+
+    return render(request, 'search.html', args)

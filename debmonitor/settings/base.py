@@ -23,6 +23,7 @@ else:
 DEBMONITOR_VERIFY_CLIENTS = DEBMONITOR_CONFIG.get('VERIFY_CLIENTS', True)
 DEBMONITOR_PROXY_HOSTS = DEBMONITOR_CONFIG.get('PROXY_HOSTS', [])
 DEBMONITOR_HOST_EXTERNAL_LINKS = DEBMONITOR_CONFIG.get('HOST_EXTERNAL_LINKS', {})
+DEBMONITOR_SEARCH_MIN_LENGTH = DEBMONITOR_CONFIG.get('SEARCH_MIN_LENGTH', 3)
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -81,6 +82,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'csp.context_processors.nonce',
                 'hosts.context.security_upgrade',
+                'debmonitor.context.search_min_length',
             ],
         },
     },

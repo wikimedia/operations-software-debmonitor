@@ -9,6 +9,7 @@ from debmonitor import views
 urlpatterns = [
     path('', views.index, name='index'),
     path('client', views.client, name='client'),
+    path('search', views.search, name='search'),
     path('hosts/', include('hosts.urls')),
     path('kernels/', include('kernels.urls')),
     path('packages/', include('bin_packages.urls')),

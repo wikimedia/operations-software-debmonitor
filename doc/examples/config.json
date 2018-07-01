@@ -20,6 +20,7 @@
         "InventorySite": "https://inventory.example.com/{fqdn}",
         "OtherSite": "https://other.example.com/?q={hostname}"
     },
+    "SEARCH_MIN_LENGTH": 3,
     "LDAP": {
         "SERVER_URI": "ldaps://ldap.example.com",
         "BIND_DN": "cn=bindagent,ou=profile,dc=example,dc=com",
