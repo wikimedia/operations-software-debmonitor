@@ -32,7 +32,6 @@
 {% block bottom_script %}
 $(document).ready(function() {
     var table = $('#debmonitor-table').DataTable({
-        'aPaginationLengths': [50,100,500],
         'deferRender': true,
         'fixedHeader': true,
         'stateSave': true,
@@ -42,9 +41,6 @@ $(document).ready(function() {
         {% endif %}
         'initComplete': function (settings, json) {
             $('#debmonitor-table').removeClass('hide-loading');
-            {% if custom_sort %}
-            $('#customSort3').addClass('active').removeClass('text-secondary');
-            {% endif %}
 
             {% if upgrades_column %}
             $('#debmonitor-table_wrapper > div.row:first > div').prop('class', 'col-sm-12 col-md-4')
@@ -78,6 +74,29 @@ $(document).ready(function() {
                 }
             });
             {% endif %}
+
+            {% if custom_sort %}
+            $('#customSort3').addClass('active').removeClass('text-secondary');
+
+            $('#customSort1').click(function(event) {
+                event.stopPropagation();
+                table.order([[{{ custom_sort.installed }}, 'desc'], [0, 'asc']]).draw();
+                $(this).addClass('active').removeClass('text-secondary');
+                $('#customSort2, #customSort3').removeClass('active').addClass('text-secondary');
+            });
+            $('#customSort2').click(function() {
+                event.stopPropagation();
+                table.order([[{{ custom_sort.upgrades }}, 'desc'], [{{ custom_sort.installed }}, 'desc'], [0, 'asc']]).draw();
+                $(this).addClass('active').removeClass('text-secondary');
+                $('#customSort1, #customSort3').removeClass('active').addClass('text-secondary');
+            });
+            $('#customSort3').click(function() {
+                event.stopPropagation();
+                table.order([[{{ custom_sort.security }}, 'desc'], [{{ custom_sort.upgrades }}, 'desc'], [{{ custom_sort.installed }}, 'desc'], [0, 'asc']]).draw();
+                $(this).addClass('active').removeClass('text-secondary');
+                $('#customSort1, #customSort2').removeClass('active').addClass('text-secondary');
+            });
+            {% endif %}
         },
         'language': {'search': 'Filter:'},
         'lengthMenu': [[50, 100, 500, -1], [50, 100, 500, 'All']],
@@ -87,23 +106,22 @@ $(document).ready(function() {
         {% elif default_order %}
         'order': {{ default_order|safe }},
         {% else %}
-        'aaSorting': [],
+        'order': [],
         {% endif %}
 
         {% if datatables_column_defs %}
         'columnDefs': {{ datatables_column_defs|safe }},
         {% endif %}
 
-        {% if custom_sort %}
+        {% if custom_sort or column_grouping %}
         'drawCallback': function (settings) {
+            {% if custom_sort %}
             if (settings.bSorted) {
                 $('#customSort1, #customSort2, #customSort3').removeClass('active').addClass('text-secondary');
             }
-        },
-        {% endif %}
+            {% endif %}
 
-        {% if column_grouping %}
-        'drawCallback': function (settings) {
+            {% if column_grouping %}
             var api = this.api();
             var rows = api.rows({page: 'current'}).nodes();
             var last1 = null;
@@ -149,6 +167,7 @@ $(document).ready(function() {
             $.each(counters, function(i, val) {
                 $('#tableGroupCounter' + i).text(val);
             });
+            {% endif %}
         },
         {% endif %}
 
@@ -160,26 +179,5 @@ $(document).ready(function() {
         },
         {% endif %}
     });
-
-    {% if custom_sort %}
-    $('#customSort1').click(function(event) {
-        event.stopPropagation();
-        table.order([[{{ custom_sort.installed }}, 'desc'], [0, 'asc']]).draw();
-        $(this).addClass('active').removeClass('text-secondary');
-        $('#customSort2, #customSort3').removeClass('active').addClass('text-secondary');
-    });
-    $('#customSort2').click(function() {
-        event.stopPropagation();
-        table.order([[{{ custom_sort.upgrades }}, 'desc'], [{{ custom_sort.installed }}, 'desc'], [0, 'asc']]).draw();
-        $(this).addClass('active').removeClass('text-secondary');
-        $('#customSort1, #customSort3').removeClass('active').addClass('text-secondary');
-    });
-    $('#customSort3').click(function() {
-        event.stopPropagation();
-        table.order([[{{ custom_sort.security }}, 'desc'], [{{ custom_sort.upgrades }}, 'desc'], [{{ custom_sort.installed }}, 'desc'], [0, 'asc']]).draw();
-        $(this).addClass('active').removeClass('text-secondary');
-        $('#customSort1, #customSort2').removeClass('active').addClass('text-secondary');
-    });
-    {% endif %}
 });
 {% endblock %}
