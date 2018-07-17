@@ -8,12 +8,14 @@
   <dd class="col-sm-9">{{ host.os.name }}</dd>
   <dt class="col-sm-3">Last update</dt>
   <dd class="col-sm-9"><span data-toggle="tooltip" title="{{ host.modified|date:"r" }}">{{ host.modified|timesince }} ago</span></dd>
+  {% if external_links %}
   <dt class="col-sm-3">External resources</dt>
   <dd class="col-sm-9">
     {% for label, url in external_links.items %}
     <a href="{{ url }}">{{ label }}</a>{% if not forloop.last %}, {% endif %}
     {% endfor %}
   </dd>
+  {% endif %}
 </dl>
 {% endblock %}
 
