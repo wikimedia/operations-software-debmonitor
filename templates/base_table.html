@@ -56,6 +56,7 @@ $(document).ready(function() {
             var state = api.state.loaded();
             if (state && state.customFilterSelect) {
                 $('#customFilterSelect').val(state.customFilterSelect).change();
+                api.state.save();
             }
 
             $('#customFilterSelect').change(function() {
