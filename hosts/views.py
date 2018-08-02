@@ -19,11 +19,6 @@ from hosts.models import Host, HostPackage, SECURITY_UPGRADE
 from src_packages.models import OS
 
 
-try:
-    JSONDecodeError = json.JSONDecodeError
-except AttributeError:  # pragma: notpy34 no cover - Backward compatibility with Python 3.4
-    JSONDecodeError = ValueError
-
 TEXT_PLAIN = 'text/plain'
 logger = logging.getLogger(__name__)
 
@@ -187,7 +182,7 @@ def update(request, name):
 
     try:
         payload = json.loads(request.body.decode('utf-8'))
-    except JSONDecodeError as e:
+    except json.JSONDecodeError as e:
         return http.HttpResponseBadRequest(
             'Unable to parse JSON string payload: {e}'.format(e=e), content_type=TEXT_PLAIN)
 

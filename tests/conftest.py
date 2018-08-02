@@ -9,7 +9,7 @@ except ImportError:  # Python2
     import mock
 
 
-if sys.version_info.major >= 3:  # Would fail for CLI tests in Python2
+if sys.version_info.major >= 3 and sys.version_info.minor >= 5:  # Would fail for CLI tests in Python 2.7 and 3.4
     from django.core.management import call_command
 
 
@@ -17,7 +17,8 @@ HOSTNAME = 'host1.example.com'
 STRONGHOLD_MIDDLEWARE = 'stronghold.middleware.LoginRequiredMiddleware'
 
 
-@pytest.mark.skipif(sys.version_info.major < 3, reason='Requires Python3 or greater')
+@pytest.mark.skipif(sys.version_info.major < 3 or sys.version_info.major == 3 and sys.version_info.minor < 5,
+                    reason='Requires Python3.5 or greater')
 @pytest.fixture(scope='session')
 def django_db_setup(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
