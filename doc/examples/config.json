@@ -29,7 +29,7 @@
             "SEARCH": "ou=people,dc=example,dc=com"
         },
         "GROUP_SEARCH": "dc=example,dc=com",
-        "REQUIRE_GROUP": "cn=staff,ou=groups,dc=example,dc=com",
+        "REQUIRE_GROUP": ["cn=staff,ou=groups,dc=example,dc=com", "cn=contractor,ou=groups,dc=example,dc=com"],
         "CACHE_GROUPS": true,
         "CACHE_TIMEOUT": 900,
         "FIND_GROUP_PERMS": true,
@@ -38,10 +38,9 @@
             "email": "mail"
         },
         "USER_FLAGS_BY_GROUP": {
-            "is_active": "cn=staff,ou=groups,dc=example,dc=com",
-            "is_staff": "cn=staff,ou=groups,dc=example,dc=com",
+            "is_active": ["cn=staff,ou=groups,dc=example,dc=com", "cn=contractor,ou=groups,dc=example,dc=com"],
+            "is_staff": ["cn=staff,ou=groups,dc=example,dc=com", "cn=admin,ou=groups,dc=example,dc=com"],
             "is_superuser": "cn=admin,ou=groups,dc=example,dc=com"
         }
     }
-
 }

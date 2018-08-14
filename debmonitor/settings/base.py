@@ -176,9 +176,7 @@ if DEBMONITOR_CONFIG.get('LOG_DB_QUERIES', False):
 # LDAP, dynamically load all overriden variables from the config
 
 if DEBMONITOR_CONFIG.get('LDAP', {}):
-    import ldap
-
-    from django_auth_ldap.config import LDAPSearch, GroupOfNamesType
+    from debmonitor.settings import _ldap
 
     AUTHENTICATION_BACKENDS = ('django_auth_ldap.backend.LDAPBackend',)
     LOGGING['loggers']['django_auth_ldap'] = {
@@ -186,20 +184,8 @@ if DEBMONITOR_CONFIG.get('LDAP', {}):
         'level': 'INFO',
     }
 
-    module = sys.modules[__name__]
-    for key, value in DEBMONITOR_CONFIG.get('LDAP', {}).items():
-        if key == 'GROUP_SEARCH':
-            AUTH_LDAP_GROUP_SEARCH = LDAPSearch(value, ldap.SCOPE_SUBTREE, '(objectClass=groupOfNames)')
-            AUTH_LDAP_GROUP_TYPE = GroupOfNamesType()
-        elif key == 'USER_SEARCH':
-            AUTH_LDAP_USER_SEARCH = LDAPSearch(
-                value['SEARCH'],
-                ldap.SCOPE_ONELEVEL,
-                '({user_field}=%(user)s)'.format(user_field=value['USER_FIELD']))
-        elif key == 'GLOBAL_OPTIONS':  # Options for ldap.set_option(). Keys are ldap.OPT_* constants.
-            AUTH_LDAP_GLOBAL_OPTIONS = {getattr(ldap, opt_name): opt_value for opt_name, opt_value in value.items()}
-        else:
-            setattr(module, 'AUTH_LDAP_' + key, value)
+    for key, value in _ldap.get_settings(DEBMONITOR_CONFIG['LDAP']).items():
+        setattr(sys.modules[__name__], key, value)
 
 # Content-Security-Policy
 CSP_DEFAULT_SRC = ("'self'", "'unsafe-inline'")  # TODO: remove unsafe-inline once more widely supported by browsers.
