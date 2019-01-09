@@ -9,9 +9,9 @@ VALID_DN_STRINGS = (
     'CN=host1.example.com,O=Acme,C=US',
     'O=Acme,CN=host1.example.com,C=US',
     'O=Acme,C=US,CN=host1.example.com',
-    'CN=host1.example.com,O=Acme\, US,C=US',
-    'O=Acme\, US,CN=host1.example.com,C=US',
-    'O=Acme\, US,C=US,CN=host1.example.com',
+    r'CN=host1.example.com,O=Acme\, US,C=US',
+    r'O=Acme\, US,CN=host1.example.com,C=US',
+    r'O=Acme\, US,C=US,CN=host1.example.com',
 )
 INVALID_DN_STRINGS = (
     '',
