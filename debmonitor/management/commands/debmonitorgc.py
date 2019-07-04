@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Count
 
 from bin_packages.models import Package, PackageVersion
+from kernels.models import KernelVersion
 from src_packages.models import SrcPackage, SrcPackageVersion
 
 
@@ -35,3 +36,8 @@ class Command(BaseCommand):
             versions_count=Count('versions', distinct=True)).filter(versions_count=0).order_by().delete()
         self.stdout.write(self.style.SUCCESS(
             'Deleted {count} SrcPackage objects not referenced by any SrcPackageVersion'.format(count=res[0])))
+
+        res = KernelVersion.objects.select_related(None).annotate(
+            hosts_count=Count('hosts', distinct=True)).filter(hosts_count=0).order_by().delete()
+        self.stdout.write(self.style.SUCCESS(
+            'Deleted {count} KernelVersion objects not referenced by any Host'.format(count=res[0])))
