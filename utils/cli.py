@@ -385,6 +385,9 @@ def parse_args(argv):
     parser.add_argument('-s', '--server', help='DebMonitor server DNS name, required unless -n/--dry-run is set.')
     parser.add_argument('-p', '--port', default=443, type=int,
                         help='Port in which the DebMonitor server is listening. [default: 443]')
+    parser.add_argument('-i', '--imagename',
+                        help='Instead of submitting host entries, record the package state of a container image'
+                             'This parameter specifies the image name and enables the image mode')
     parser.add_argument('-c', '--cert',
                         help=('Path to the client SSL certificate to use for sending the update. If it does not '
                               'contain also the private key, -k/--key must be specified too.'))
@@ -402,7 +405,9 @@ def parse_args(argv):
                         help=('Parse modified packages from stdin according to DPKG hook Dpkg::Pre-Install-Pkgs '
                               'format for version 3 and 2.'))
     parser.add_argument('-n', '--dry-run', action='store_true',
-                        help='Do not send the report to DebMonitor server and print it to stdout.')
+                        help='Do not send the report to a DebMonitor server, rather print the package data to stdout '
+                             'in JSON format. This can be useful to generate container information in a build '
+                             'environment which does not have direct access to a DebMonitor server.')
     parser.add_argument('--update', action='store_true',
                         help=('Self-update DebMonitor CLI script if there is a new version available on the '
                               'DebMonitor server. The script will execute with the current version.'))
@@ -458,23 +463,31 @@ def run(args, input_lines=None):
     payload = {
         'api_version': args.api,
         'os': get_distro_name(),
-        'hostname': hostname,
-        'running_kernel': {
-            'release': platform.release(),
-            'version': platform.version(),
-        },
         'installed': packages['installed'],
         'uninstalled': packages['uninstalled'],
         'upgradable': packages['upgradable'],
         'update_type': upgrade_type,
     }
 
+    if args.imagename:
+        payload['image_name'] = args.imagename
+    else:
+        payload['hostname'] = hostname
+        payload['running_kernel'] = {
+                'release': platform.release(),
+                'version': platform.version(),
+        }
+
     if args.dry_run:
         print(json.dumps(payload, sort_keys=True, indent=4))
         return
 
     base_url = 'https://{server}:{port}'.format(server=args.server, port=args.port)
-    url = '{base_url}/hosts/{host}/update'.format(base_url=base_url, host=hostname)
+
+    if args.imagename:
+        url = '{base_url}/images/{imagename}/update'.format(base_url=base_url, imagename=args.imagename)
+    else:
+        url = '{base_url}/hosts/{host}/update'.format(base_url=base_url, host=hostname)
 
     cert = None
     if args.key is not None:
