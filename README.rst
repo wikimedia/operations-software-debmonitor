@@ -42,19 +42,21 @@ See all the available options of the CLI with the ``-h/--help`` option.
 Database configuration
 ^^^^^^^^^^^^^^^^^^^^^^
 
-debmonitor uses a custom Django database backend (debmonitor.mysql),
-which requires the following settings to be added to the MySQL/Mariadb
-configuration under [mysqld] along with a restart of the database server:
+debmonitor uses a custom Django database backend (``debmonitor.mysql``), which requires the following settings to be
+added to the MySQL/Mariadb configuration under the ``[mysqld]`` section along with a restart of the database server:
 
-innodb_file_per_table = 1
-innodb_file_format    = barracuda
-innodb_large_prefix   = 1
+.. code-block:: ini
+
+  innodb_file_per_table = 1
+  innodb_file_format    = barracuda
+  innodb_large_prefix   = 1
 
 
-The following steps are needed to create the database and the
-debmonitor DB user:
+The following steps are needed to create the database and the debmonitor DB user:
 
-CREATE DATABASE debmonitor;
-CREATE USER debmonitor@localhost IDENTIFIED by 'SecretPassword';
-GRANT ALL PRIVILEGES ON debmonitor.* TO debmonitor@localhost;
-FLUSH PRIVILEGES;
+.. code-block:: sql
+
+  CREATE DATABASE debmonitor;
+  CREATE USER debmonitor@localhost IDENTIFIED by 'SecretPassword';
+  GRANT ALL PRIVILEGES ON debmonitor.* TO debmonitor@localhost;
+  FLUSH PRIVILEGES;
