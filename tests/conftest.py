@@ -14,6 +14,7 @@ if sys.version_info.major >= 3 and sys.version_info.minor >= 5:  # Would fail fo
 
 
 HOSTNAME = 'host1.example.com'
+IMAGENAME = 'parsoid'
 STRONGHOLD_MIDDLEWARE = 'stronghold.middleware.LoginRequiredMiddleware'
 
 

@@ -16,11 +16,13 @@ class Command(BaseCommand):
         """Run the garbage collection."""
         res = PackageVersion.objects.select_related(None).annotate(
             hosts_count=Count('installed_hosts', distinct=True)).annotate(
-            upgrades_count=Count('upgradable_hosts', distinct=True)
-            ).filter(hosts_count=0, upgrades_count=0).order_by().delete()
+            upgrades_count=Count('upgradable_hosts', distinct=True)).annotate(
+            images_count=Count('installed_images', distinct=True)
+            ).filter(hosts_count=0, upgrades_count=0, images_count=0).order_by().delete()
 
         self.stdout.write(self.style.SUCCESS(
-            'Deleted {count} PackageVersion objects not referenced by any HostPackage'.format(count=res[0])))
+            'Deleted {count} PackageVersion objects not referenced by any HostPackage or ImagePackage'.
+            format(count=res[0])))
 
         res = Package.objects.select_related(None).annotate(
             versions_count=Count('versions', distinct=True)).filter(versions_count=0).order_by().delete()

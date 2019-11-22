@@ -10,6 +10,7 @@ from django.views.decorators.http import require_safe
 from bin_packages.models import Package, PackageVersion
 from debmonitor import DistinctGroupConcat
 from hosts.models import HostPackage, SECURITY_UPGRADE
+from images.models import ImagePackage
 
 
 @require_safe
@@ -21,36 +22,42 @@ def index(request):
 
     # Get all the additional annotations separately for query optimization purposes
     package_annotations = defaultdict(lambda: defaultdict(int))
-    hosts_counts = Package.objects.select_related(None).values('id').annotate(
-        hosts_count=Count('installed_hosts', distinct=True))
-    for package in hosts_counts:
-        package_annotations[package['id']]['hosts_count'] = package['hosts_count']
+
+    inst_count = Package.objects.select_related(None).values('id').annotate(
+        inst_count=Count('installed_hosts', distinct=True) + Count('installed_images', distinct=True))
+    for package in inst_count:
+        package_annotations[package['id']]['inst_count'] = package['inst_count']
 
     upgrades_count = Package.objects.select_related(None).values('id').annotate(
-        upgrades_count=Count('upgradable_hosts', distinct=True))
+        upgrades_count=Count('upgradable_hosts', distinct=True) + Count('upgradable_images', distinct=True))
     for package in upgrades_count:
         package_annotations[package['id']]['upgrades_count'] = package['upgrades_count']
 
-    security_count = HostPackage.objects.select_related(None).filter(upgrade_type=SECURITY_UPGRADE).values(
+    security_count_hosts = HostPackage.objects.select_related(None).filter(upgrade_type=SECURITY_UPGRADE).values(
         'package').annotate(security_count=Count('host', distinct=True)).order_by('package')
-    for package in security_count:
-        package_annotations[package['package']]['security_count'] = package['security_count']
+    for package in security_count_hosts:
+        package_annotations[package['package']]['security_count'] += package['security_count']
+    security_count_img = ImagePackage.objects.select_related(None).filter(upgrade_type=SECURITY_UPGRADE).values(
+        'package').annotate(security_count=Count('image', distinct=True)).order_by('package')
+    for package in security_count_img:
+        package_annotations[package['package']]['security_count'] += package['security_count']
 
     # Insert all the annotated data back into the package objects for easy access in the templates
     for package in packages:
-        for annotation in ('hosts_count', 'upgrades_count', 'security_count'):
+        for annotation in ('inst_count', 'upgrades_count', 'security_count'):
             setattr(package, annotation, package_annotations[package.id][annotation])
 
     table_headers = [
         {'title': 'Package', 'tooltip': 'Name of the binary package', 'badges': [
-         {'style': 'primary', 'tooltip': 'Number of hosts that have this package installed'},
-         {'style': 'warning', 'tooltip': 'Number of hosts that have this package installed and are pending an upgrade'},
+         {'style': 'primary', 'tooltip': 'Number of hosts/images that have this package installed'},
+         {'style': 'warning',
+          'tooltip': 'Number of hosts/images that have this package installed and are pending an upgrade'},
          {'style': 'danger',
-          'tooltip': 'Number of hosts that have this package installed and are pending a security upgrade'}]},
+          'tooltip': 'Number of hosts/images that have this package installed and are pending a security upgrade'}]},
         {'title': '# Versions',
-         'tooltip': 'Number of distinct installed versions of this package between all the hosts'},
+         'tooltip': 'Number of distinct installed versions of this package between all the hosts/images'},
         {'title': 'OSes',
-         'tooltip': 'List of distinct Operating Systems the hosts that have this package installed are running'},
+         'tooltip': 'List of distinct operating systems the hosts/images that have this package installed are running'},
         {'title': '# Hosts'},
         {'title': '# Upgrades'},
         {'title': '# Security Upgrades'},
@@ -60,7 +67,9 @@ def index(request):
         # The IDs are DataTable column IDs.
         'custom_sort': {'name': 'Package', 'installed': 3, 'upgrades': 4, 'security': 5},
         'datatables_column_defs': json.dumps([
-            {'targets': [3, 4, 5], 'visible': False, 'searchable': False, 'sortable': False}]),
+            {'targets': [3, 4, 5], 'visible': False},
+            {'targets': [1, 2, 3, 4, 5], 'searchable': False},
+            {'targets': [3, 4, 5], 'sortable': False}]),
         'datatables_page_length': 50,
         'packages': packages,
         'section': 'bin_packages',
@@ -75,16 +84,25 @@ def index(request):
 def detail(request, name):
     """Binary package detail page."""
     package_versions = PackageVersion.objects.filter(package__name=name).annotate(
-        hosts_count=Count('installed_hosts', distinct=True), upgrades_count=Count('upgradable_hosts', distinct=True))
+        hosts_count=Count('installed_hosts', distinct=True),
+        upgrades_count=Count('upgradable_hosts', distinct=True),
+        images_count=Count('installed_images', distinct=True),
+        img_upgrades_count=Count('upgradable_images', distinct=True))
 
     if not package_versions:
         raise Http404
 
     host_packages = HostPackage.objects.filter(package__name=name)
-    upgrades = HostPackage.objects.select_related(None).filter(
+    image_packages = ImagePackage.objects.filter(package__name=name)
+
+    upgrades_host = HostPackage.objects.select_related(None).filter(
         package__name=name, upgrade_type=SECURITY_UPGRADE).values('upgradable_version').annotate(
         Count('host', distinct=True)).order_by('upgradable_version')
-    security_upgrades = {upgrade['upgradable_version']: upgrade['host__count'] for upgrade in upgrades}
+    upgrades_img = ImagePackage.objects.select_related(None).filter(
+        package__name=name, upgrade_type=SECURITY_UPGRADE).values('upgradable_imageversion').annotate(
+        Count('image', distinct=True)).order_by('upgradable_imageversion')
+    security_upgrades_host = {upgrade['upgradable_version']: upgrade['host__count'] for upgrade in upgrades_host}
+    security_upgrades_img = {upgrade['upgradable_imageversion']: upgrade['image__count'] for upgrade in upgrades_img}
 
     os_versions = OrderedDict()
     src_packages_versions = set()
@@ -97,8 +115,11 @@ def detail(request, name):
 
         os_versions[os]['versions'][ver] = defaultdict(int)
         os_versions[os]['versions'][ver]['installed'] += package_version.hosts_count
+        os_versions[os]['versions'][ver]['installed'] += package_version.images_count
         os_versions[os]['versions'][ver]['upgradable'] += package_version.upgrades_count
-        os_versions[os]['versions'][ver]['security'] += security_upgrades.get(package_version.id, 0)
+        os_versions[os]['versions'][ver]['upgradable'] += package_version.img_upgrades_count
+        os_versions[os]['versions'][ver]['security'] += security_upgrades_host.get(package_version.id, 0)
+        os_versions[os]['versions'][ver]['security'] += security_upgrades_img.get(package_version.id, 0)
         src_packages_versions.add(package_version.src_package_version.src_package.name)
 
     for os_data in os_versions.values():
@@ -112,7 +133,8 @@ def detail(request, name):
     table_headers = [
         {'title': 'OS'},
         {'title': 'Version'},
-        {'title': 'Hostname', 'tooltip': 'Host that have this specific combination of OS and version installed'},
+        {'title': 'Hostname/Image name', 'tooltip':
+         'Host/image that have this specific combination of OS and version installed'},
         {'title': 'Upgradable to', 'tooltip': 'Version to which the package can be upgraded to'},
         {'title': 'Upgrade Type'},
     ]
@@ -121,15 +143,20 @@ def detail(request, name):
         # The IDs are DataTable column IDs.
         'column_groups': [
             {'column': 0, 'title': 'OS', 'css_group': 1,
-             'tooltip': 'Number of hosts that have this package installed and are running this OS'},
+             'tooltip': 'Number of hosts/images that have this package and OS installed'},
             {'column': 1, 'title': 'Version', 'css_group': 2,
-             'tooltip': 'Number of hosts that have this binary package version installed and are running this OS'},
+             'tooltip': 'Number of hosts/images that have this specific package version and OS installed'},
         ],
         'default_order': json.dumps([[0, 'asc'], [1, 'asc']]),
         'datatables_column_defs': json.dumps([
-            {'targets': [0, 1, 4], 'visible': False, 'sortable': False}, {'targets': [3], 'sortable': False}]),
+            {'targets': [0, 1], 'searchable': False},
+            {'targets': [0, 1, 3, 4], 'sortable': False},
+            {'targets': [0, 1, 4], 'visible': False},
+        ]),
+
         'datatables_page_length': 50,
         'host_packages': host_packages,
+        'image_packages': image_packages,
         'os_versions': os_versions,
         'package_versions': package_versions,
         'section': 'bin_packages',

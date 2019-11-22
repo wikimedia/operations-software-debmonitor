@@ -29,8 +29,18 @@ def get_host_cn(dn):
 
 
 def is_valid_cn(cn, name):
-    """Return True if the provided Common Name is allowed to modify the data for the provided name."""
+    """Return True if the provided Common Name is allowed to modify the data for the provided host.
+    This is the case if the CN matches the package hostname or if it's coming from a valid proxy
+    for host submisions  """
     if cn == name or cn in settings.DEBMONITOR_PROXY_HOSTS:
+        return True
+
+    return False
+
+
+def is_valid_image_proxy(cn):
+    """Return True if the provided CN is in the list of valid proxies for image submissions."""
+    if cn in settings.DEBMONITOR_PROXY_IMAGES:
         return True
 
     return False
@@ -79,7 +89,15 @@ class AuthHostMiddleware(object):
         if view_kwargs.get('name', None) is None:  # Nothing else to verify
             return
 
-        # Verify that the hostname in the certificate DN matches the given hostname from the URI
-        if not is_valid_cn(cn, view_kwargs['name']):
-            return HttpResponseForbidden("Unauthorized to modify host '{name}' with certificate '{dn}'".format(
-                name=view_kwargs['name'], dn=ssl_dn), content_type=TEXT_PLAIN)
+        # For image submissions we don't validate the host name, but only whether the image data
+        # is submitted from a valid proxy host
+        if view_func.__name__ == 'update_image':
+            if not is_valid_image_proxy(cn):
+                return HttpResponseForbidden("Unauthorized to modify image '{name}' with certificate '{dn}'".format(
+                    name=view_kwargs['name'], dn=ssl_dn), content_type=TEXT_PLAIN)
+
+        else:
+            # Verify that the hostname in the certificate DN matches the given hostname from the URI
+            if not is_valid_cn(cn, view_kwargs['name']):
+                return HttpResponseForbidden("Unauthorized to modify host '{name}' with certificate '{dn}'".format(
+                    name=view_kwargs['name'], dn=ssl_dn), content_type=TEXT_PLAIN)

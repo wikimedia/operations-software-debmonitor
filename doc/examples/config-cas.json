@@ -16,6 +16,7 @@
     "REQUIRE_LOGIN": true,
     "VERIFY_CLIENTS": true,
     "PROXY_HOSTS": ["host1.example.com"],
+    "PROXY_IMAGES": ["container-build.example.com"],
     "HOST_EXTERNAL_LINKS": {
         "InventorySite": "https://inventory.example.com/{fqdn}",
         "OtherSite": "https://other.example.com/?q={hostname}"

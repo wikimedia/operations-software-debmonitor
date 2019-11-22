@@ -61,6 +61,21 @@ The following steps are needed to create the database and the debmonitor DB user
   GRANT ALL PRIVILEGES ON debmonitor.* TO debmonitor@localhost;
   FLUSH PRIVILEGES;
 
+Proxy hosts
+^^^^^^^^^^^
+
+By default data submissions for host package data is validated against
+the CN of the submitting host. There might be situations where that
+cannot be applied, e.g. if you have a central orchestration setup
+which also updates the Debmonitor data. You can whitelist hosts for
+arbitrary host data submissions/deletions using the ``PROXY_HOSTS``
+config setting, it accepts a list of FQDNs.
+
+If container images are also being tracked, support for enabling
+submissions from e.g. the container build host can be configured using
+the similar ``PROXY_IMAGES`` setting.
+
+
 CAS authentication
 ^^^^^^^^^^^^^^^^^^
 

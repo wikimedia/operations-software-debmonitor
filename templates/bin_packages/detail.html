@@ -62,7 +62,7 @@
   <td>{{ host_package.host.os.name }}</td>
   <td>{{ host_package.package_version.version }}</td>
   <td>
-    <a href="{% url 'hosts:detail' host_package.host.name %}">{{ host_package.host.name }}</a>
+    <a href="{% url 'hosts:detail' host_package.host.name %}">{{ host_package.host.name }} (host)</a>
   </td>
   <td>
     {% if host_package.upgradable_version.version %}
@@ -75,6 +75,27 @@
     {% endif %}
   </td>
   <td>{% if host_package.upgrade_type %}{{ host_package.upgrade_type }}{% endif %}</td>
+</tr>
+{% endfor %}
+
+{% for image_package in image_packages %}
+<tr>
+  <td>{{ image_package.image.os.name }}</td>
+  <td>{{ image_package.package_version.version }}</td>
+  <td>
+    <a href="{% url 'images:detail' image_package.image.name %}">{{ image_package.image.name }} (image)</a>
+  </td>
+  <td>
+    {% if image_package.upgradable_imageversion.version %}
+    {{ image_package.upgradable_imageversion.version }}
+      {% if image_package.upgrade_type == security_upgrade %}
+      <span class="badge badge-danger align-text-bottom">security</span>
+      {% else %}
+      <span class="badge badge-warning align-text-bottom">upgrade</span>
+      {% endif %}
+    {% endif %}
+  </td>
+  <td>{% if image_package.upgrade_type %}{{ image_package.upgrade_type }}{% endif %}</td>
 </tr>
 {% endfor %}
 {% endblock %}

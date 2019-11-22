@@ -14,6 +14,7 @@ import debmonitor
 from bin_packages.models import Package, PackageVersion
 from debmonitor.decorators import verify_clients
 from hosts.models import Host, HostPackage, SECURITY_UPGRADE
+from images.models import Image, ImagePackage
 from kernels.models import KernelVersion
 from src_packages.models import SrcPackage, SrcPackageVersion
 
@@ -31,16 +32,31 @@ def index(request):
         Max('modified'),
         Min('modified'),
         Count('pk'))
+    images = Image.objects.values('modified').aggregate(
+        Max('modified'),
+        Min('modified'),
+        Count('pk'))
     upgradable = HostPackage.objects.exclude(upgradable_package__isnull=True).aggregate(
         Count('host', distinct=True),
         Count('upgradable_package', distinct=True),
         Count('upgradable_version', distinct=True),
+        Count('pk'))
+    upgradable_images = ImagePackage.objects.exclude(upgradable_imagepackage__isnull=True).aggregate(
+        Count('image', distinct=True),
+        Count('upgradable_imagepackage', distinct=True),
+        Count('upgradable_imageversion', distinct=True),
         Count('pk'))
     security_upgrades = HostPackage.objects.exclude(upgradable_package__isnull=True).filter(
         upgrade_type__startswith=SECURITY_UPGRADE).aggregate(
         Count('host', distinct=True),
         Count('upgradable_package', distinct=True),
         Count('upgradable_version', distinct=True),
+        Count('pk'))
+    security_upgrades_images = ImagePackage.objects.exclude(upgradable_imagepackage__isnull=True).filter(
+        upgrade_type__startswith=SECURITY_UPGRADE).aggregate(
+        Count('image', distinct=True),
+        Count('upgradable_imagepackage', distinct=True),
+        Count('upgradable_imageversion', distinct=True),
         Count('pk'))
 
     counters = [
@@ -63,6 +79,11 @@ def index(request):
             {'title': 'With security upgrades', 'count': security_upgrades['upgradable_version__count'],
              'style': 'danger'},
         ]},
+        {'title': 'Images', 'count': images['pk__count'], 'url': 'images', 'rows': [
+            {'title': 'With pending upgrades', 'count': upgradable_images['image__count'], 'style': 'warning'},
+            {'title': 'With pending security upgrades',
+             'count': security_upgrades_images['image__count'], 'style': 'danger'},
+        ]},
     ]
 
     args = {
@@ -70,14 +91,22 @@ def index(request):
             {'title': 'Latest', 'value': hosts['modified__max']},
             {'title': 'Oldest', 'value': hosts['modified__min']},
         ],
+        'image_updates': [
+            {'title': 'Latest', 'value': images['modified__max']},
+            {'title': 'Oldest', 'value': images['modified__min']},
+        ],
         'counters': counters,
         'subtitle': 'Debian packages tracker',
         'title': 'DebMonitor',
         'totals': [
-            {'title': 'Pending upgrades', 'count': upgradable['pk__count'],
+            {'title': 'Pending host upgrades', 'count': upgradable['pk__count'],
              'tooltip': 'Number of pending upgrades across all hosts', 'style': 'warning'},
-            {'title': 'Security upgrades', 'count': security_upgrades['pk__count'],
+            {'title': 'Pending image upgrades', 'count': upgradable_images['pk__count'],
+             'tooltip': 'Number of pending upgrades across all images', 'style': 'warning'},
+            {'title': 'Security upgrades (hosts)', 'count': security_upgrades['pk__count'],
              'tooltip': 'Number of pending security upgrades across all hosts', 'style': 'danger'},
+            {'title': 'Security upgrades (images)', 'count': security_upgrades_images['pk__count'],
+             'tooltip': 'Number of pending security upgrades across all images', 'style': 'danger'},
         ],
     }
 
@@ -118,6 +147,8 @@ def search(request):
         search_results = [
             SearchResult(title='Hosts', url_name='hosts:detail',
                          results=Host.objects.filter(name__contains=query).select_related(None).values('name')),
+            SearchResult(title='Images', url_name='images:detail',
+                         results=Image.objects.filter(name__contains=query).select_related(None).values('name')),
             SearchResult(title='Packages', url_name='bin_packages:detail',
                          results=Package.objects.filter(name__contains=query).select_related(None).values('name')),
             SearchResult(title='Source Packages', url_name='src_packages:detail',

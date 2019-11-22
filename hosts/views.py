@@ -15,12 +15,12 @@ from django.views.decorators.http import require_safe, require_POST
 
 from bin_packages.models import PackageVersion
 from debmonitor.decorators import verify_clients
+from debmonitor.middleware import TEXT_PLAIN
 from hosts.models import Host, HostPackage, SECURITY_UPGRADE
 from kernels.models import KernelVersion
 from src_packages.models import OS
 
 
-TEXT_PLAIN = 'text/plain'
 logger = logging.getLogger(__name__)
 
 

@@ -14,6 +14,7 @@ urlpatterns = [
     path('client', views.client, name='client'),
     path('search', views.search, name='search'),
     path('hosts/', include('hosts.urls')),
+    path('images/', include('images.urls')),
     path('kernels/', include('kernels.urls')),
     path('packages/', include('bin_packages.urls')),
     path('source-packages/', include('src_packages.urls')),

@@ -1,0 +1,24 @@
+{% extends "../base_table.html" %}
+
+{% block table_body %}
+{% for image in images %}
+<tr>
+  <td>
+    <div class="row">
+      <div class="col-md-8"><a href="{% url 'images:detail' image.name %}">{{ image.name }}</a></div>
+      <div class="col-md-4">
+        {% if image.packages_count %}<span class="badge badge-primary align-text-bottom" data-toggle="tooltip" data-trigger="hover" data-delay='{"show": 800, "hide": 50}' title="{{ table_headers.0.badges.0.tooltip }}" aria-pressed="true">{{ image.packages_count }}</span>{% endif %}
+        {% if image.upgrades_count %}<span class="badge badge-warning align-text-bottom" data-toggle="tooltip" data-trigger="hover" data-delay='{"show": 800, "hide": 50}' title="{{ table_headers.0.badges.1.tooltip }}" aria-pressed="true">{{ image.upgrades_count }}</span>{% endif %}
+        {% if image.security_count %}<span class="badge badge-danger align-text-bottom" data-toggle="tooltip" data-trigger="hover" data-delay='{"show": 800, "hide": 50}' title="{{ table_headers.0.badges.2.tooltip }}" aria-pressed="true">{{ image.security_count }}</span>{% endif %}
+      </div>
+    </div>
+  </td>
+  <td>{{ image.os.name }}</td>
+  <td>{{ image.modified|timesince }} ago</td>
+  <td>{{ image.packages_count }}</td>
+  <td>{{ image.upgrades_count }}</td>
+  <td>{{ image.security_count }}</td>
+  <td>{{ image.modified|date:"U" }}</td>
+</tr>
+{% endfor %}
+{% endblock %}

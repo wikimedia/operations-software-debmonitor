@@ -14,7 +14,7 @@ def test_command_output_noop():
     call_command('debmonitorgc', stdout=out)
 
     objects = (
-        ('PackageVersion', 'HostPackage'),
+        ('PackageVersion', 'HostPackage or ImagePackage'),
         ('Package', 'PackageVersion'),
         ('SrcPackageVersion', 'PackageVersion'),
         ('SrcPackage', 'SrcPackageVersion'),
@@ -33,10 +33,10 @@ def test_command_output_delete():
     call_command('debmonitorgc', stdout=out)
 
     objects = (
-        (6, 'PackageVersion', 'HostPackage'),
+        (6, 'PackageVersion', 'HostPackage or ImagePackage'),
         (4, 'Package', 'PackageVersion'),
-        (5, 'SrcPackageVersion', 'PackageVersion'),
-        (3, 'SrcPackage', 'SrcPackageVersion'),
+        (4, 'SrcPackageVersion', 'PackageVersion'),
+        (2, 'SrcPackage', 'SrcPackageVersion'),
     )
 
     for num, obj, ref_obj in objects:

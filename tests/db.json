@@ -391,6 +391,28 @@
         }
     },
     {
+        "model": "src_packages.srcpackageversion",
+        "pk": 6,
+        "fields": {
+            "src_package": 4,
+            "version": "1.2.3-5",
+            "os": 1,
+            "created": "2017-11-27T22:10:09.625Z",
+            "modified": "2017-11-27T22:10:09.625Z"
+        }
+    },
+    {
+        "model": "src_packages.srcpackageversion",
+        "pk": 7,
+        "fields": {
+            "src_package": 4,
+            "version": "1.2.3-4",
+            "os": 1,
+            "created": "2017-11-27T22:10:09.625Z",
+            "modified": "2017-11-27T22:10:09.625Z"
+        }
+    },
+    {
         "model": "kernels.kernelversion",
         "pk": 1,
         "fields": {
@@ -399,6 +421,123 @@
             "os": 1,
             "created": "2018-06-26T16:46:19.832Z",
             "modified": "2018-06-26T16:46:19.832Z"
+        }
+    },
+    {
+        "model": "images.image",
+        "pk": 1,
+        "fields": {
+            "name": "parsoid",
+            "os": 1,
+            "created": "2019-10-19T14:10:09.483Z",
+            "modified": "2019-10-19T14:10:09.483Z"
+        }
+    },
+    {
+        "model": "images.image",
+        "pk": 2,
+        "fields": {
+            "name": "mathoid",
+            "os": 1,
+            "created": "2019-10-19T14:10:09.483Z",
+            "modified": "2019-10-19T14:10:09.483Z"
+        }
+    },
+    {
+        "model": "src_packages.srcpackage",
+        "pk": 4,
+        "fields": {
+            "name": "nodejs"
+        }
+    },
+    {
+        "model": "bin_packages.package",
+        "pk": 5,
+        "fields": {
+            "name": "nodejs"
+        }
+    },
+    {
+        "model": "bin_packages.package",
+        "pk": 6,
+        "fields": {
+            "name": "gcc-9"
+        }
+    },
+    {
+        "model": "bin_packages.packageversion",
+        "pk": 7,
+        "fields": {
+            "package": 5,
+            "version": "1.2.3-4",
+            "os": 1,
+            "src_package_version": 7,
+            "created": "2017-11-27T22:10:09.525Z",
+            "modified": "2017-11-27T22:10:09.526Z"
+        }
+    },
+    {
+        "model": "bin_packages.packageversion",
+        "pk": 8,
+        "fields": {
+            "package": 6,
+            "version": "9.0.0-1",
+            "os": 1,
+            "src_package_version": 5,
+            "created": "2017-11-27T22:10:09.525Z",
+            "modified": "2017-11-27T22:10:09.526Z"
+        }
+    },
+    {
+        "model": "bin_packages.packageversion",
+        "pk": 9,
+        "fields": {
+            "package": 5,
+            "version": "1.2.3-5",
+            "os": 1,
+            "src_package_version": 6,
+            "created": "2017-11-27T22:10:09.525Z",
+            "modified": "2017-11-27T22:10:09.526Z"
+        }
+    },
+    {
+        "model": "images.imagepackage",
+        "pk": 1,
+        "fields": {
+            "image": 1,
+            "package": 5,
+            "package_version": 7,
+            "upgradable_imagepackage": 5,
+            "upgradable_imageversion": 9,
+            "upgrade_type": "security",
+            "created": "2017-11-27T22:10:09.529Z",
+            "modified": "2017-11-27T22:10:09.618Z"
+        }
+    },
+    {
+        "model": "images.imagepackage",
+        "pk": 2,
+        "fields": {
+            "image": 1,
+            "package": 6,
+            "package_version": 8,
+            "upgradable_imagepackage": null,
+            "upgradable_imageversion": null,
+            "created": "2017-11-27T22:10:09.529Z",
+            "modified": "2017-11-27T22:10:09.618Z"
+        }
+    },
+    {
+        "model": "images.imagepackage",
+        "pk": 3,
+        "fields": {
+            "image": 2,
+            "package": 5,
+            "package_version": 9,
+            "upgradable_imagepackage": null,
+            "upgradable_imageversion": null,
+            "created": "2017-11-27T22:10:09.529Z",
+            "modified": "2017-11-27T22:10:09.618Z"
         }
     }
 ]

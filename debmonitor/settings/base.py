@@ -21,7 +21,9 @@ else:
 # Debmonitor custom configuration
 DEBMONITOR_VERIFY_CLIENTS = DEBMONITOR_CONFIG.get('VERIFY_CLIENTS', True)
 DEBMONITOR_PROXY_HOSTS = DEBMONITOR_CONFIG.get('PROXY_HOSTS', [])
+DEBMONITOR_PROXY_IMAGES = DEBMONITOR_CONFIG.get('PROXY_IMAGES', [])
 DEBMONITOR_HOST_EXTERNAL_LINKS = DEBMONITOR_CONFIG.get('HOST_EXTERNAL_LINKS', {})
+DEBMONITOR_IMAGES_EXTERNAL_LINKS = DEBMONITOR_CONFIG.get('IMAGE_EXTERNAL_LINKS', {})
 DEBMONITOR_SEARCH_MIN_LENGTH = DEBMONITOR_CONFIG.get('SEARCH_MIN_LENGTH', 3)
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -43,6 +45,7 @@ INSTALLED_APPS = [
     'debmonitor',
     'bin_packages',
     'hosts',
+    'images',
     'kernels',
     'src_packages',
 ]
