@@ -21,6 +21,9 @@ extras_require = {
     'with-ldap': [  # With LDAP support
         'django-auth-ldap==1.7.0',
     ],
+    'with-cas': [  # With CAS support
+        'django-cas-ng==3.6.0',
+    ],
     'tests': [  # Test dependencies
         'flake8>=3.5.0',
         'pytest>=3.5.0',
@@ -29,7 +32,7 @@ extras_require = {
         'requests-mock>=1.3.0',
     ],
 }
-extras_require['with-all'] = extras_require['with-mysql'] + extras_require['with-ldap']
+extras_require['with-all'] = extras_require['with-mysql'] + extras_require['with-ldap'] + extras_require['with-cas']
 
 setup_requires = [
     'pytest-runner>=4.2',

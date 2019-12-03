@@ -60,3 +60,30 @@ The following steps are needed to create the database and the debmonitor DB user
   CREATE USER debmonitor@localhost IDENTIFIED by 'SecretPassword';
   GRANT ALL PRIVILEGES ON debmonitor.* TO debmonitor@localhost;
   FLUSH PRIVILEGES;
+
+CAS authentication
+^^^^^^^^^^^^^^^^^^
+
+debmonitor supports optional authentication via Apereo CAS. The IDP
+login URL needs to be configured via a configuration option in the
+``CAS`` block of the the config.json config file:
+
+.. code-block:: ini
+
+  "CAS": {
+     "CAS_SERVER_URL": "https://idp.wikimedia.org/idp"
+   }
+
+If access for debmonitor is to be restricted to a subset of users
+managed by Apereo CAS it needs to be restricted within the CAS service
+definition by means of an ``accessStrategy`` setting.
+
+CAS support is implemented via django-cas-ng.
+
+By default CAS protocol version 2 is used (as the default in
+django-cas-ng), you can set the protocol version using the CAS_VERSION
+option (possible values ``1``, ``2``, ``3`` or ``CAS_2_SAML_1.0``).
+
+By default users are created in the database after successful CAS
+authentication, this can be disabled by setting ``CAS_CREATE_USER`` to
+``FALSE``.

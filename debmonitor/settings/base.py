@@ -11,7 +11,6 @@ import json
 import os
 import sys
 
-
 # Load JSON configuration for secrets
 if os.environ.get('DEBMONITOR_CONFIG', False):
     with open(os.environ.get('DEBMONITOR_CONFIG'), 'r') as config_file:
@@ -176,9 +175,24 @@ if DEBMONITOR_CONFIG.get('LOG_DB_QUERIES', False):
         'propagate': False,
     }
 
-# LDAP, dynamically load all overriden variables from the config
 
-if DEBMONITOR_CONFIG.get('LDAP', {}):
+# LDAP auth and CAS auth are mutually exclusive, if both CAS and LDAP are
+# enabled, CAS takes precedence
+if DEBMONITOR_CONFIG.get('CAS', {}):
+
+    INSTALLED_APPS.append('django_cas_ng')
+    MIDDLEWARE.append('django_cas_ng.middleware.CASMiddleware')
+
+    AUTHENTICATION_BACKENDS = (
+        'django.contrib.auth.backends.ModelBackend',
+        'django_cas_ng.backends.CASBackend',
+    )
+
+    for key, value in DEBMONITOR_CONFIG['CAS'].items():
+        setattr(sys.modules[__name__], key, value)
+
+# LDAP, dynamically load all overriden variables from the config
+elif DEBMONITOR_CONFIG.get('LDAP', {}):
     from debmonitor.settings import _ldap
 
     AUTHENTICATION_BACKENDS = ('django_auth_ldap.backend.LDAPBackend',)
