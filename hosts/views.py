@@ -4,25 +4,23 @@ import logging
 from collections import defaultdict
 
 from django import http
+from django.conf import settings
 from django.db.models import BooleanField, Case, Count, When
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_safe, require_POST
-from stronghold.decorators import public
 
 from bin_packages.models import PackageVersion
-from hosts import HostAuthError, verify_clients
+from debmonitor.decorators import verify_clients
+from debmonitor.middleware import TEXT_PLAIN
 from hosts.models import Host, HostPackage, SECURITY_UPGRADE
+from kernels.models import KernelVersion
 from src_packages.models import OS
 
 
-try:
-    JSONDecodeError = json.JSONDecodeError
-except AttributeError:  # pragma: notpy34 no cover - Backward compatibility with Python 3.4
-    JSONDecodeError = ValueError
-
-TEXT_PLAIN = 'text/plain'
 logger = logging.getLogger(__name__)
 
 
@@ -84,98 +82,66 @@ def index(request):
     return render(request, 'hosts/index.html', args)
 
 
-@require_safe
-def kernel_index(request):
-    """Kernels list page."""
-    kernels = Host.objects.values('running_kernel_slug', 'os__name', 'running_kernel').annotate(
-        hosts_count=Count('running_kernel_slug')).order_by('os__name', 'running_kernel_slug')
+class DetailView(View):
 
-    table_headers = [
-        {'title': 'OS', 'tooltip': 'Operating System'},
-        {'title': 'Kernel', 'tooltip': 'Full version of the running kernel'},
-        {'title': '# Hosts', 'tooltip': 'Number of host that are running this kernel'},
-    ]
+    @method_decorator(verify_clients(['DELETE']))
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
 
-    args = {
-        'datatables_column_defs': json.dumps([{'targets': [2], 'searchable': False}]),
-        'datatables_page_length': -1,
-        'kernels': kernels,
-        'section': 'kernels',
-        'subtitle': '',
-        'table_headers': table_headers,
-        'title': 'Kernels',
-    }
-    return render(request, 'kernels/index.html', args)
+    def get(self, request, name):
+        """Host detail page."""
+        host = get_object_or_404(Host.objects.filter(name=name))
 
+        host_packages = HostPackage.objects.filter(host=host).annotate(
+            has_upgrade=Case(
+                When(upgradable_version__isnull=False, then=True),
+                default=False,
+                output_field=BooleanField())
+            ).order_by('-has_upgrade', '-upgrade_type', 'package__name')
 
-@require_safe
-def detail(request, name):
-    """Host detail page."""
-    host = get_object_or_404(Host.objects.filter(name=name))
-    host_packages = HostPackage.objects.filter(host=host).annotate(
-        has_upgrade=Case(
-            When(upgradable_version__isnull=False, then=True),
-            default=False,
-            output_field=BooleanField())
-        ).order_by('-has_upgrade', '-upgrade_type', 'package__name')
+        table_headers = [
+            {'title': 'Package', 'tooltip': 'Name of the binary package'},
+            {'title': 'Version', 'tooltip': 'Installed version of this binary package'},
+            {'title': 'Upgradable to', 'tooltip': 'Version of this binary package the host can upgrade it to'},
+            {'title': 'Upgrade Type'},
+        ]
 
-    table_headers = [
-        {'title': 'Package', 'tooltip': 'Name of the binary package'},
-        {'title': 'Version', 'tooltip': 'Installed version of this binary package'},
-        {'title': 'Upgradable to', 'tooltip': 'Version of this binary package the host can upgrade it to'},
-        {'title': 'Upgrade Type'},
-    ]
+        args = {
+            'datatables_column_defs': json.dumps(
+                [{'targets': [3], 'visible': False}, {'targets': [1, 2], 'orderable': False}]),
+            'datatables_page_length': -1,
+            'external_links': {key: value.format(fqdn=host.name, hostname=host.name.split('.')[0])
+                               for key, value in settings.DEBMONITOR_HOST_EXTERNAL_LINKS.items()},
+            'host': host,
+            'host_packages': host_packages,
+            'section': 'hosts',
+            'subtitle': 'Host',
+            'table_headers': table_headers,
+            'title': host.name,
+            'upgrades_column': 2,
+        }
+        return render(request, 'hosts/detail.html', args)
 
-    args = {
-        'datatables_column_defs': json.dumps(
-            [{'targets': [3], 'visible': False}, {'targets': [1, 2], 'orderable': False}]),
-        'datatables_page_length': -1,
-        'host': host,
-        'host_packages': host_packages,
-        'section': 'hosts',
-        'subtitle': 'Host',
-        'table_headers': table_headers,
-        'title': host.name,
-        'upgrades_column': 2,
-    }
-    return render(request, 'hosts/detail.html', args)
+    def delete(self, request, name):
+        host = get_object_or_404(Host.objects.filter(name=name))
+        host.delete()
+
+        return http.HttpResponse(status=204, content_type=TEXT_PLAIN)
 
 
-@require_safe
-def kernel_detail(request, slug):
-    """Kernel detail page."""
-    hosts = Host.objects.filter(running_kernel_slug=slug).values('name', 'running_kernel')
-    if not hosts:
-        raise http.Http404
-
-    args = {
-        'datatables_page_length': 50,
-        'hosts': hosts,
-        'section': 'kernels',
-        'subtitle': 'Kernel',
-        'table_headers': [{'title': 'Hostname'}],
-        'title': hosts[0]['running_kernel'],
-    }
-    return render(request, 'kernels/detail.html', args)
-
-
+@verify_clients
 @csrf_exempt
 @require_POST
-@public
 def update(request, name):
     """Update a host and all it's related information from a JSON."""
-    try:
-        verify_clients(request, hostname=name)
-    except HostAuthError as e:
-        return http.HttpResponseForbidden(e, content_type=TEXT_PLAIN)
-
     if not request.body:
         return http.HttpResponseBadRequest("Empty POST, expected JSON string: {req}".format(
             req=request), content_type=TEXT_PLAIN)
 
     try:
         payload = json.loads(request.body.decode('utf-8'))
-    except JSONDecodeError as e:
+    except json.JSONDecodeError as e:
         return http.HttpResponseBadRequest(
             'Unable to parse JSON string payload: {e}'.format(e=e), content_type=TEXT_PLAIN)
 
@@ -204,23 +170,24 @@ def update(request, name):
 
 def _update_v1(request, name, os, payload):
     """Update API v1."""
-    running_kernel = payload['running_kernel']['version']
     start_time = timezone.now()
+    kernel, _ = KernelVersion.objects.get_or_create(name=payload['running_kernel']['version'], os=os)
 
     try:
         host = Host.objects.get(name=name)
         host.os = os
-        host.running_kernel = running_kernel
+        host.kernel = kernel
         host.save()  # Always update at least the modification time
         host_packages = {host_pkg.package.name: host_pkg for host_pkg in HostPackage.objects.filter(host=host)}
 
     except Host.DoesNotExist:
-        host = Host(name=name, os=os, running_kernel=running_kernel)
+        host = Host(name=name, os=os, kernel=kernel)
         host.save()
         host_packages = {}
         logger.info("Created Host '%s'", name)
 
     existing_not_updated = []
+    existing_upgradable_not_updated = []
 
     installed = payload.get('installed', [])
     for item in installed:
@@ -238,15 +205,31 @@ def _update_v1(request, name, os, payload):
 
     upgradable = payload.get('upgradable', [])
     for item in upgradable:
-        _process_upgradable(host, os, host_packages, existing_not_updated, item)
+        _process_upgradable(host, os, host_packages, existing_upgradable_not_updated, item)
 
     logger.info("Tracked %d upgradable packages for host '%s'", len(upgradable), name)
 
     if payload['update_type'] == 'full':
-        # Delete orphaned entries based on the modification datetime and the list of already up-to-date IDs
-        res = HostPackage.objects.filter(host=host, modified__lt=start_time).exclude(
-            pk__in=existing_not_updated).delete()
-        logger.info("Deleted %d HostPackage orphaned entries for host '%s'", res[0], name)
+        _garbage_collection(host, name, start_time, existing_not_updated, existing_upgradable_not_updated)
+
+
+def _garbage_collection(host, name, start_time, existing_not_updated, existing_upgradable_not_updated):
+    # Delete orphaned entries based on the modification datetime and the list of already up-to-date IDs
+    res = HostPackage.objects.filter(host=host, modified__lt=start_time).exclude(pk__in=existing_not_updated).delete()
+    logger.info("Deleted %d HostPackage orphaned entries for host '%s'", res[0], name)
+
+    # Cleanup orphaned upgrades based on the modification datetime and the list of already up-to-date IDs
+    host_packages = HostPackage.objects.filter(
+        host=host, modified__lt=start_time, upgradable_package__isnull=False).exclude(
+        pk__in=existing_upgradable_not_updated)
+
+    for host_package in host_packages:
+        host_package.upgradable_package = None
+        host_package.upgradable_version = None
+        host_package.upgrade_type = None
+        host_package.save()
+
+    logger.info("Cleaned %d HostPackage upgradable info for host '%s'", len(host_packages), name)
 
 
 def _process_installed(host, os, host_packages, existing_not_updated, item):
@@ -269,19 +252,26 @@ def _process_installed(host, os, host_packages, existing_not_updated, item):
             host=host, package=package_version.package, package_version=package_version)
 
 
-def _process_upgradable(host, os, host_packages, existing_not_updated, item):
+def _process_upgradable(host, os, host_packages, existing_upgradable_not_updated, item):
     """Process an upgradable package item."""
     existing = host_packages.get(item['name'], None)
 
     if existing is not None:
         if existing.upgradable_package is not None and existing.upgradable_version.version == item['version_to']:
-            existing_not_updated.append(existing.pk)
+            existing_upgradable_not_updated.append(existing.pk)
             return  # Already up-to-date
 
         upgradable_version, _ = PackageVersion.objects.get_or_create(
             os=os, version=item['version_to'], host_package=existing, **item)
-        existing.upgradable_package = upgradable_version.package
-        existing.upgradable_version = upgradable_version
+
+        if existing.package_version == upgradable_version:  # The package has been already upgraded
+            existing.upgradable_package = None
+            existing.upgradable_version = None
+            existing.upgrade_type = None
+        else:
+            existing.upgradable_package = upgradable_version.package
+            existing.upgradable_version = upgradable_version
+
         existing.save()
     else:
         installed_version, _ = PackageVersion.objects.get_or_create(os=os, version=item['version_from'], **item)

@@ -46,5 +46,16 @@
         {% endfor %}
     </div>
   </div>
+  <div class="card bg-light debmonitor-card-small">
+    <div class="card-body">
+      <h6 class="card-title">Image updates</h6>
+        {% for update in image_updates %}
+        <div class="card-text">
+          <span>{{ update.title }}:&nbsp;</span>
+          <span data-toggle="tooltip" title="{{ update.value|date:"r" }}">{{ update.value|timesince }} ago</span>
+        </div>
+        {% endfor %}
+    </div>
+  </div>
 </div>
 {% endblock %}

@@ -32,16 +32,71 @@
 {% block bottom_script %}
 $(document).ready(function() {
     var table = $('#debmonitor-table').DataTable({
-        'aPaginationLengths': [50,100,500],
         'deferRender': true,
         'fixedHeader': true,
+        'stateSave': true,
+        'stateDuration': -1,  // Use browser's sessionStorage.
         {% if datatables_page_length %}
         'pageLength': {{ datatables_page_length }},
         {% endif %}
         'initComplete': function (settings, json) {
             $('#debmonitor-table').removeClass('hide-loading');
+
+            {% if upgrades_column %}
+            $('#debmonitor-table_wrapper > div.row:first > div').prop('class', 'col-sm-12 col-md-4')
+            $('<div class="col-sm-12 col-md-4 text-left"> \
+              <select class="custom-select" id="customFilterSelect"> \
+                <option value="0" selected>Show all packages</option> \
+                <option value="1">Show only upgradable packages</option> \
+                <option value="2">Show only security upgrades</option> \
+              </select> \
+            </div>').insertAfter('#debmonitor-table_wrapper > div.row:first > div:first');
+
+            var api = new $.fn.dataTable.Api(settings);
+            var state = api.state.loaded();
+            if (state && state.customFilterSelect) {
+                $('#customFilterSelect').val(state.customFilterSelect).change();
+                api.state.save();
+            }
+
+            $('#customFilterSelect').change(function() {
+                switch(this.value) {
+                    case "1":
+                        table.search('').columns().search('');
+                        table.columns({{ upgrades_column }}).search('.', true, false).draw();
+                        break;
+                    case "2":
+                        table.search('').columns().search('');
+                        table.columns({{ upgrades_column }} + 1).search('{{ security_upgrade }}', false, false).draw();
+                        break;
+                    default:
+                        table.search('').columns().search('').draw();
+                        break;
+                }
+            });
+            {% endif %}
+
             {% if custom_sort %}
             $('#customSort3').addClass('active').removeClass('text-secondary');
+
+            $('#customSort1').click(function(event) {
+                event.stopPropagation();
+                table.order([[{{ custom_sort.installed }}, 'desc'], [0, 'asc']]).draw();
+                $(this).addClass('active').removeClass('text-secondary');
+                $('#customSort2, #customSort3').removeClass('active').addClass('text-secondary');
+            });
+            $('#customSort2').click(function() {
+                event.stopPropagation();
+                table.order([[{{ custom_sort.upgrades }}, 'desc'], [{{ custom_sort.installed }}, 'desc'], [0, 'asc']]).draw();
+                $(this).addClass('active').removeClass('text-secondary');
+                $('#customSort1, #customSort3').removeClass('active').addClass('text-secondary');
+            });
+            $('#customSort3').click(function() {
+                event.stopPropagation();
+                table.order([[{{ custom_sort.security }}, 'desc'], [{{ custom_sort.upgrades }}, 'desc'], [{{ custom_sort.installed }}, 'desc'], [0, 'asc']]).draw();
+                $(this).addClass('active').removeClass('text-secondary');
+                $('#customSort1, #customSort2').removeClass('active').addClass('text-secondary');
+            });
             {% endif %}
         },
         'language': {'search': 'Filter:'},
@@ -52,118 +107,62 @@ $(document).ready(function() {
         {% elif default_order %}
         'order': {{ default_order|safe }},
         {% else %}
-        'aaSorting': [],
+        'order': [],
         {% endif %}
 
         {% if datatables_column_defs %}
         'columnDefs': {{ datatables_column_defs|safe }},
         {% endif %}
 
-        {% if custom_sort %}
+        {% if custom_sort or column_groups %}
         'drawCallback': function (settings) {
+            {% if custom_sort %}
             if (settings.bSorted) {
                 $('#customSort1, #customSort2, #customSort3').removeClass('active').addClass('text-secondary');
             }
-        },
-        {% endif %}
+            {% endif %}
 
-        {% if column_grouping %}
-        'drawCallback': function (settings) {
+            {% if column_groups %}
             var api = this.api();
             var rows = api.rows({page: 'current'}).nodes();
-            var last1 = null;
-            var last2 = null;
+            var last = {};
             var counter = 0;
             var counters = [];
 
-            api.column({{ column_grouping.columns.0 }}, {page:'current'}).data().each(function (group, i) {
-                if (last1 !== group) {
+            {% for column_group in column_groups %}
+            api.column({{ column_group.column }}, {page:'current'}).data().each(function (group, i) {
+                if (last[{{ column_group.column }}] !== group) {
                     counters.push(counter);
                     $(rows).eq(i).before(
-                        '<tr class="table-group1"> \
+                        '<tr class="table-group{{ column_group.css_group }}"> \
                           <td colspan="{{ table_headers|length }}"> \
-                            {{ column_grouping.column_titles.0 }}: <span class="font-weight-bold">' +
+                            {{ column_group.title }}: <span class="font-weight-bold">' +
                             group +
-                        '</span> <span data-toggle="tooltip" title="Number of hosts that have this package installed and are running this OS"> \
+                        '</span> <span data-toggle="tooltip" title="{{ column_group.tooltip }}"> \
                          <span id="tableGroupCounter' + counters.length + '" class="badge badge-primary align-text-bottom"></span></span></td></tr>'
                     );
-                    last1 = group;
+                    last[{{ column_group.column }}] = group;
                     counter = 0;
                 }
                 counter++;
             });
-
-            api.column({{ column_grouping.columns.1 }}, {page:'current'}).data().each(function (group, i) {
-                if (last2 !== group) {
-                    counters.push(counter);
-                    $(rows).eq(i).before(
-                        '<tr class="table-group2"> \
-                          <td colspan="{{ table_headers|length }}" class="pl-4"> \
-                            {{ column_grouping.column_titles.1 }}: <span class="font-weight-bold">' +
-                            group +
-                        '</span> <span data-toggle="tooltip" title="Number of hosts that have this version installed and are running this OS"> \
-                         <span id="tableGroupCounter' + counters.length + '" class="badge badge-primary align-text-bottom"></span></span></td></tr>'
-                    );
-                    last2 = group;
-                    counter = 0;
-                }
-                counter++;
-            });
+            {% endfor %}
             counters.push(counter);
 
             $.each(counters, function(i, val) {
                 $('#tableGroupCounter' + i).text(val);
             });
+            {% endif %}
+        },
+        {% endif %}
+
+        {% if upgrades_column %}
+        'stateSaveParams': function (settings, data) {
+            if ($('#customFilterSelect').length == 1) {
+                data.customFilterSelect = $('#customFilterSelect').val();
+            }
         },
         {% endif %}
     });
-
-    {% if upgrades_column %}
-    $('#debmonitor-table_wrapper > div.row:first > div').prop('class', 'col-sm-12 col-md-4')
-    $('<div class="col-sm-12 col-md-4 text-left"> \
-      <select class="custom-select" id="customFilterSelect"> \
-        <option selected>Show all packages</option> \
-        <option value="1">Show only upgradable packages</option> \
-        <option value="2">Show only security upgrades</option> \
-      </select> \
-    </div>').insertAfter("#debmonitor-table_wrapper > div.row:first > div:first");
-
-    $('#customFilterSelect').change(function() {
-        switch(this.value) {
-            case "1":
-                table.search('').columns().search('');
-                table.columns({{ upgrades_column }}).search('.', true, false).draw();
-                break;
-            case "2":
-                table.search('').columns().search('');
-                table.columns({{ upgrades_column }} + 1).search('{{ security_upgrade }}', false, false).draw();
-                break;
-            default:
-                table.search('').columns().search('').draw();
-                break;
-        }
-    });
-    {% endif %}
-
-    {% if custom_sort %}
-    $('#customSort1').click(function(event) {
-        event.stopPropagation();
-        table.order([[{{ custom_sort.installed }}, 'desc'], [0, 'asc']]).draw();
-        $(this).addClass('active').removeClass('text-secondary');
-        $('#customSort2, #customSort3').removeClass('active').addClass('text-secondary');
-    });
-    $('#customSort2').click(function() {
-        event.stopPropagation();
-        table.order([[{{ custom_sort.upgrades }}, 'desc'], [{{ custom_sort.installed }}, 'desc'], [0, 'asc']]).draw();
-        $(this).addClass('active').removeClass('text-secondary');
-        $('#customSort1, #customSort3').removeClass('active').addClass('text-secondary');
-    });
-    $('#customSort3').click(function() {
-        event.stopPropagation();
-        table.order([[{{ custom_sort.security }}, 'desc'], [{{ custom_sort.upgrades }}, 'desc'], [{{ custom_sort.installed }}, 'desc'], [0, 'asc']]).draw();
-        $(this).addClass('active').removeClass('text-secondary');
-        $('#customSort1, #customSort2').removeClass('active').addClass('text-secondary');
-    });
-    {% endif %}
 });
 {% endblock %}

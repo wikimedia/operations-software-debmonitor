@@ -38,3 +38,67 @@ To automate the tracking of the packages in the target hosts, follow these steps
   the latest version available on the DebMonitor server.
 
 See all the available options of the CLI with the ``-h/--help`` option.
+
+Database configuration
+^^^^^^^^^^^^^^^^^^^^^^
+
+debmonitor uses a custom Django database backend (``debmonitor.mysql``), which requires the following settings to be
+added to the MySQL/Mariadb configuration under the ``[mysqld]`` section along with a restart of the database server:
+
+.. code-block:: ini
+
+  innodb_file_per_table = 1
+  innodb_file_format    = barracuda
+  innodb_large_prefix   = 1
+
+
+The following steps are needed to create the database and the debmonitor DB user:
+
+.. code-block:: sql
+
+  CREATE DATABASE debmonitor;
+  CREATE USER debmonitor@localhost IDENTIFIED by 'SecretPassword';
+  GRANT ALL PRIVILEGES ON debmonitor.* TO debmonitor@localhost;
+  FLUSH PRIVILEGES;
+
+Proxy hosts
+^^^^^^^^^^^
+
+By default data submissions for host package data is validated against
+the CN of the submitting host. There might be situations where that
+cannot be applied, e.g. if you have a central orchestration setup
+which also updates the Debmonitor data. You can whitelist hosts for
+arbitrary host data submissions/deletions using the ``PROXY_HOSTS``
+config setting, it accepts a list of FQDNs.
+
+If container images are also being tracked, support for enabling
+submissions from e.g. the container build host can be configured using
+the similar ``PROXY_IMAGES`` setting.
+
+
+CAS authentication
+^^^^^^^^^^^^^^^^^^
+
+debmonitor supports optional authentication via Apereo CAS. The IDP
+login URL needs to be configured via a configuration option in the
+``CAS`` block of the the config.json config file:
+
+.. code-block:: ini
+
+  "CAS": {
+     "CAS_SERVER_URL": "https://idp.wikimedia.org/idp"
+   }
+
+If access for debmonitor is to be restricted to a subset of users
+managed by Apereo CAS it needs to be restricted within the CAS service
+definition by means of an ``accessStrategy`` setting.
+
+CAS support is implemented via django-cas-ng.
+
+By default CAS protocol version 2 is used (as the default in
+django-cas-ng), you can set the protocol version using the CAS_VERSION
+option (possible values ``1``, ``2``, ``3`` or ``CAS_2_SAML_1.0``).
+
+By default users are created in the database after successful CAS
+authentication, this can be disabled by setting ``CAS_CREATE_USER`` to
+``FALSE``.

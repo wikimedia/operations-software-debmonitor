@@ -72,14 +72,22 @@ from collections import namedtuple
 try:
     from configparser import ConfigParser, Error as ConfigParserError
 except ImportError:  # pragma: py3 no cover - Backward compatibility with Python 2.7
+    # This except block is not actually covered by tests because the 3rd party test dependency module 'pytest-cov'
+    # has as a dependency the 3rd party module 'configparser' that exposes on Python 2 the stdlib module 'ConfigParser'
+    # as 'configparser', not allowing the tests to actually enter this block.
     from ConfigParser import SafeConfigParser as ConfigParser, Error as ConfigParserError
+
+try:
+    from json.decoder import JSONDecodeError
+except ImportError:  # pragma: py3 no cover - Backward compatibility with Python 2.7
+    JSONDecodeError = ValueError
 
 import apt
 import requests
 
 
 # The client version is based on the server's major.minor version plus a dedicated client-specific incremental number.
-__version__ = '0.1client3'
+__version__ = '0.2client1'
 
 SUPPORTED_API_VERSIONS = ('v1',)
 CLIENT_VERSION_HEADER = 'X-Debmonitor-Client-Version'
@@ -378,6 +386,14 @@ def parse_args(argv):
     except ConfigParserError as e:
         conf_parser.error('Unable to parse configuration file {name}: {msg}'.format(name=args.config, msg=e))
 
+    def json_file_type(path):
+        """Open a file and parse its content as JSON."""
+        fp = argparse.FileType()(path)
+        try:
+            return json.load(fp)
+        except JSONDecodeError as e:
+            raise argparse.ArgumentTypeError("Failed to load JSON file '{path}': {e}".format(path=path, e=e))
+
     # Add remaining CLI options
     parser = argparse.ArgumentParser(
         prog='debmonitor-client', description='DebMonitor CLI - Debian packages tracker CLI', epilog=__doc__,
@@ -385,6 +401,11 @@ def parse_args(argv):
     parser.add_argument('-s', '--server', help='DebMonitor server DNS name, required unless -n/--dry-run is set.')
     parser.add_argument('-p', '--port', default=443, type=int,
                         help='Port in which the DebMonitor server is listening. [default: 443]')
+    parser.add_argument('-i', '--image-name',
+                        help='Instead of submitting host entries, record the package state of a container image'
+                             'This parameter specifies the image name and enables the image mode')
+    parser.add_argument('-f', '--image-file', type=json_file_type,
+                        help='Load the container package data to submit from a pre-dumped JSON file.')
     parser.add_argument('-c', '--cert',
                         help=('Path to the client SSL certificate to use for sending the update. If it does not '
                               'contain also the private key, -k/--key must be specified too.'))
@@ -402,7 +423,9 @@ def parse_args(argv):
                         help=('Parse modified packages from stdin according to DPKG hook Dpkg::Pre-Install-Pkgs '
                               'format for version 3 and 2.'))
     parser.add_argument('-n', '--dry-run', action='store_true',
-                        help='Do not send the report to DebMonitor server and print it to stdout.')
+                        help='Do not send the report to a DebMonitor server, rather print the package data to stdout '
+                             'in JSON format. This can be useful to generate container information in a build '
+                             'environment which does not have direct access to a DebMonitor server.')
     parser.add_argument('--update', action='store_true',
                         help=('Self-update DebMonitor CLI script if there is a new version available on the '
                               'DebMonitor server. The script will execute with the current version.'))
@@ -431,24 +454,32 @@ def parse_args(argv):
     return args
 
 
-def run(args, input_lines=None):
-    """Collect the list of packages and send the update to the DebMonitor server.
+def generate_payload(args, input_lines=None):
+    """Collect the list of packages and generate the payload to send to the DebMonitor server.
+
+    There are three ways of submitting package data:
+    1. From a host submitting to a debmonitor server (default if no option is passed otherwise.
+    2. From a running container image to a debmonitor server (enabled via --image_name option (but can also be used
+       to only dump the state by also adding the --dry-run option.
+    3. Submitting pregenerated package data in JSON format (enabled via --image_file).
 
     Arguments:
         args (argparse.Namespace): the parsed CLI parameters.
+        input_lines (list, optional): the lines passed to stdin via the dpkg_hook.
 
-    Raises:
-        RuntimeError, requests.exceptions.RequestException: on error.
+    Returns:
+        dict: the payload dictionary.
 
     """
-    hostname = socket.getfqdn()
+    if args.image_file:
+        return args.image_file
 
     if args.dpkg_hook:
-        upgrade_type = 'dpkg_hook'
+        update_type = 'dpkg_hook'
     elif args.upgradable:
-        upgrade_type = 'upgradable'
+        update_type = 'upgradable'
     else:
-        upgrade_type = 'full'
+        update_type = 'full'
 
     if args.dpkg_hook:
         packages = parse_dpkg_hook(input_lines)
@@ -458,23 +489,48 @@ def run(args, input_lines=None):
     payload = {
         'api_version': args.api,
         'os': get_distro_name(),
-        'hostname': hostname,
-        'running_kernel': {
-            'release': platform.release(),
-            'version': platform.version(),
-        },
         'installed': packages['installed'],
         'uninstalled': packages['uninstalled'],
         'upgradable': packages['upgradable'],
-        'update_type': upgrade_type,
+        'update_type': update_type,
     }
 
+    if args.image_name:
+        payload['image_name'] = args.image_name
+    else:
+        payload['hostname'] = socket.getfqdn()
+        payload['running_kernel'] = {
+            'release': platform.release(),
+            'version': platform.version(),
+        }
+
+    return payload
+
+
+def run(args, input_lines=None):
+    """Collect the list of packages and send the update to the DebMonitor server.
+
+    Arguments:
+        args (argparse.Namespace): the parsed CLI parameters.
+        input_lines (list, optional): the lines passed to stdin via the dpkg_hook.
+
+    Raises:
+        RuntimeError, requests.exceptions.RequestException: on error.
+
+    """
+    base_url = 'https://{server}:{port}'.format(server=args.server, port=args.port)
+
+    payload = generate_payload(args, input_lines)
     if args.dry_run:
         print(json.dumps(payload, sort_keys=True, indent=4))
         return
 
-    base_url = 'https://{server}:{port}'.format(server=args.server, port=args.port)
-    url = '{base_url}/hosts/{host}/update'.format(base_url=base_url, host=hostname)
+    if args.image_file is not None:
+        url = '{base_url}/images/{name}/update'.format(base_url=base_url, name=payload['image_name'])
+    elif args.image_name is not None:
+        url = '{base_url}/images/{name}/update'.format(base_url=base_url, name=args.image_name)
+    else:
+        url = '{base_url}/hosts/{host}/update'.format(base_url=base_url, host=payload['hostname'])
 
     cert = None
     if args.key is not None:
@@ -482,13 +538,11 @@ def run(args, input_lines=None):
     elif args.cert is not None:
         cert = args.cert
 
-    # Not using json= for backward compatibility with OSes with python-requests < 2.4.2 like Ubuntu trusty.
-    response = requests.post(url, cert=cert, data=json.dumps(payload), headers={'Content-Type': 'application/json'},
-                             verify=args.verify)
+    response = requests.post(url, cert=cert, json=payload, verify=args.verify)
     if response.status_code != requests.status_codes.codes.created:
         raise RuntimeError('Failed to send the update to the DebMonitor server: {status} {body}'.format(
             status=response.status_code, body=response.text))
-    logger.info('Successfully sent the %s update to the DebMonitor server', upgrade_type)
+    logger.info('Successfully sent the %s update to the DebMonitor server', payload['update_type'])
 
     if args.update:
         try:

@@ -1,0 +1,40 @@
+{% extends "../base_table.html" %}
+
+{% block summary %}
+<dl class="row">
+  <dt class="col-sm-3">OS</dt>
+  <dd class="col-sm-9">{{ image.os.name }}</dd>
+  <dt class="col-sm-3">Last update</dt>
+  <dd class="col-sm-9"><span data-toggle="tooltip" title="{{ image.modified|date:"r" }}">{{ image.modified|timesince }} ago</span></dd>
+  {% if external_links %}
+  <dt class="col-sm-3">External resources</dt>
+  <dd class="col-sm-9">
+    {% for label, url in external_links.items %}
+    <a href="{{ url }}">{{ label }}</a>{% if not forloop.last %}, {% endif %}
+    {% endfor %}
+  </dd>
+  {% endif %}
+</dl>
+{% endblock %}
+
+{% block table_body %}
+{% for package in image_packages %}
+<tr>
+  <td>
+    <a href="{% url 'bin_packages:detail' package.package.name %}">{{ package.package.name }}</a>
+  </td>
+  <td>{{ package.package_version.version }}</td>
+  <td>
+    {% if package.upgradable_imageversion.version %}
+    {{ package.upgradable_imageversion.version }}
+      {% if package.upgrade_type == security_upgrade %}
+      <span class="badge badge-danger align-text-bottom">security</span>
+      {% else %}
+      <span class="badge badge-warning align-text-bottom">upgrade</span>
+      {% endif %}
+    {% endif %}
+  </td>
+  <td>{% if package.upgrade_type %}{{ package.upgrade_type }}{% endif %}</td>
+</tr>
+{% endfor %}
+{% endblock %}

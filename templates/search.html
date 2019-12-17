@@ -1,0 +1,27 @@
+{% extends "./base_table.html" %}
+
+{% block summary %}
+{% if not search_results %}
+<div class="alert alert-danger" role="alert">
+  <h4>Invalid search query!</h4>
+  <span>At least {{ SEARCH_MIN_LENGTH }} characters required.</span>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block table_body %}
+{% for search_result in search_results %}
+  {% for result in search_result.results %}
+  <tr>
+    <td>{{ search_result.title }}</td>
+    <td>
+      {% if search_result.title == 'Kernels' %}
+      <a href="{% url search_result.url_name result.os.id result.slug %}">{{ result.name }}</a>
+      {% else %}
+      <a href="{% url search_result.url_name result.name %}">{{ result.name }}{% if result.version %} ({{ result.version }} - {{ result.os__name }}){% endif %}</a>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+{% endfor %}
+{% endblock %}

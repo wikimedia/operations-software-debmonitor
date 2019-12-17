@@ -6,4 +6,3 @@ omit = */tests.py
 exclude_lines =
     pragma: no cover
     pragma: ${PRAGMA_MAJOR} no cover
-    pragma: ${PRAGMA_MINOR} no cover

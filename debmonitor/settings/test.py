@@ -22,4 +22,5 @@ LOGGING['loggers'][''] = {  # noqa F405 defined from star imports
 }
 
 if DEBMONITOR_CONFIG.get('LDAP', {}):  # noqa F405 defined from star imports
-    LOGGING['loggers']['django_auth_ldap']['level'] = 'DEBUG'  # noqa F405 defined from star imports
+    if 'django_auth_ldap' in LOGGING['loggers']:  # noqa F405 defined from star imports
+        LOGGING['loggers']['django_auth_ldap']['level'] = 'DEBUG'  # noqa F405 defined from star imports

@@ -1,3 +1,4 @@
+import io
 import json
 import logging
 import os
@@ -15,7 +16,7 @@ except ImportError:  # Python2
 
 
 from tests import debmonitor as tests_deb
-from tests.conftest import HOSTNAME
+from tests.conftest import HOSTNAME, IMAGENAME
 
 
 OS_NAME = 'ExampleOS'
@@ -34,12 +35,15 @@ AptPackage = namedtuple('AptPackage', ['name', 'is_installed', 'installed', 'can
 AptPkgVersion = namedtuple('AptPkgVersion', ['source_name', 'version'])
 DEBMONITOR_SERVER = 'debmonitor.example.com'
 DEBMONITOR_BASE_URL = 'https://{server}:443'.format(server=DEBMONITOR_SERVER)
-DEBMONITOR_UPDATE_URL = '{base_url}/hosts/{hostname}/update'.format(base_url=DEBMONITOR_BASE_URL, hostname=HOSTNAME)
+DEBMONITOR_HOST_UPDATE_URL = '{base_url}/hosts/{name}/update'.format(base_url=DEBMONITOR_BASE_URL, name=HOSTNAME)
+DEBMONITOR_IMAGE_UPDATE_URL = '{base_url}/images/{name}/update'.format(base_url=DEBMONITOR_BASE_URL, name=IMAGENAME)
 DEBMONITOR_CLIENT_URL = '{base_url}/client'.format(base_url=DEBMONITOR_BASE_URL)
 DEBMONITOR_CLIENT_CONFIG = 'tests/fixtures/client.{mode}.conf'
 DEBMONITOR_CLIENT_CONFIG_OK = DEBMONITOR_CLIENT_CONFIG.format(mode='ok')
 DEBMONITOR_CLIENT_CA_BUNDLE = 'tests/fixtures/ca_bundle.crt'
 OS_RELEASE_FILE = 'tests/fixtures/os_release'
+INVALID_JSON_FILE = 'tests/fixtures/invalid_json'
+VALID_JSON_FILE = 'tests/fixtures/valid_json'
 APT_HOOK_LINES = {
     2: [
         # Installed
@@ -249,6 +253,28 @@ def test_parse_args_update_no_ca(capsys):
         cli.parse_args(['-n', '--update'])
     _, err = capsys.readouterr()
     assert 'argument --ca is required when --update is set' in err
+
+
+def test_parse_args_image_file_no_file(capsys):
+    """Calling parse_args with --image_file should raise an error if unable to read the file."""
+    with pytest.raises(SystemExit):
+        cli.parse_args(['-f', 'nonexistent'])
+    _, err = capsys.readouterr()
+    assert "argument -f/--image-file: can't open 'nonexistent'" in err
+
+
+def test_parse_args_image_file_no_json(capsys):
+    """Calling parse_args with --image_file should raise an error if unable to parse the file as JSON."""
+    with pytest.raises(SystemExit):
+        cli.parse_args(['-f', INVALID_JSON_FILE])
+    _, err = capsys.readouterr()
+    assert 'argument -f/--image-file: Failed to load JSON file' in err
+
+
+def test_parse_args_image_file_ok():
+    """Calling parse_args with --image_file should load the JSON file."""
+    args = cli.parse_args(['-n', '-f', VALID_JSON_FILE])
+    assert args.image_file == {'key': 'value'}
 
 
 def test_parse_apt_line_wrong_version():
@@ -482,10 +508,10 @@ def test_get_distro_name_fail():
 
 
 @pytest.mark.parametrize('params', ([], ['-u'], ['-k', 'cert.key', '-c', 'cert.pem'], ['-c', 'cert.pem']))
-def test_main(params, mocked_getfqdn, mocked_requests):
+def test_main_host(params, mocked_getfqdn, mocked_requests):
     """Calling main() should send the updates to the DebMonitor server with the above parameters."""
     args = cli.parse_args(['--config', '/dev/null', '-s', DEBMONITOR_SERVER] + params)
-    mocked_requests.register_uri('POST', DEBMONITOR_UPDATE_URL, status_code=201)
+    mocked_requests.register_uri('POST', DEBMONITOR_HOST_UPDATE_URL, status_code=201)
     _reset_apt_caches()
 
     with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
@@ -499,10 +525,45 @@ def test_main(params, mocked_getfqdn, mocked_requests):
     assert mocked_requests.last_request.json() == _get_payload_with_packages(params)
 
 
+def test_main_image(mocked_getfqdn, mocked_requests):
+    """Calling main() with an image should send the updates to the DebMonitor server."""
+    args = cli.parse_args(['--config', '/dev/null', '-s', DEBMONITOR_SERVER, '-i', IMAGENAME])
+    mocked_requests.register_uri('POST', DEBMONITOR_IMAGE_UPDATE_URL, status_code=201)
+    _reset_apt_caches()
+
+    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
+                    create=True) as mocked_open:
+        exit_code = cli.main(args)
+        assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
+
+    assert not mocked_getfqdn.called
+    assert mocked_requests.called
+    assert exit_code == 0
+    assert mocked_requests.last_request.json() == _get_payload_with_packages(['-i'])
+
+
+def test_main_image_file(monkeypatch, mocked_getfqdn, mocked_requests):
+    """Calling main() with an image file should send the updates to the DebMonitor server."""
+    payload = _get_payload_with_packages(['-i'])
+    stdin = json.dumps(payload)
+    if sys.version_info[0] < 3:
+        stdin = stdin.decode()
+    monkeypatch.setattr('sys.stdin', io.StringIO(stdin))
+    args = cli.parse_args(['--config', '/dev/null', '-s', DEBMONITOR_SERVER, '-f', '-'])
+    mocked_requests.register_uri('POST', DEBMONITOR_IMAGE_UPDATE_URL, status_code=201)
+
+    exit_code = cli.main(args)
+
+    assert not mocked_getfqdn.called
+    assert mocked_requests.called
+    assert exit_code == 0
+    assert mocked_requests.last_request.json() == payload
+
+
 def test_main_no_packages(mocked_getfqdn, mocked_requests):
     """Calling main() if there are no updates should success sending an empty update to the DebMonitor server."""
     args = cli.parse_args(['--config', DEBMONITOR_CLIENT_CONFIG_OK, '-u'])
-    mocked_requests.register_uri('POST', DEBMONITOR_UPDATE_URL, status_code=201)
+    mocked_requests.register_uri('POST', DEBMONITOR_HOST_UPDATE_URL, status_code=201)
     _reset_apt_caches(empty=True)
 
     with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
@@ -532,11 +593,38 @@ def test_main_dry_run(mocked_getfqdn, capsys):
     assert json.loads(out) == _get_payload_with_packages([])
 
 
+def test_main_dry_run_image_file(capsys):
+    """Calling main() with image_file and dry_run parameters should print the content of the JSON file."""
+    args = cli.parse_args(['--config', DEBMONITOR_CLIENT_CONFIG_OK, '-n', '-f', VALID_JSON_FILE])
+    _reset_apt_caches()
+
+    exit_code = cli.main(args)
+
+    out, _ = capsys.readouterr()
+    assert exit_code == 0
+    assert json.loads(out) == {'key': 'value'}
+
+
+def test_main_dry_run_image_name(capsys):
+    """Calling main() with image_name and dry_run parameters should print the updates for an image container."""
+    args = cli.parse_args(['--config', DEBMONITOR_CLIENT_CONFIG_OK, '-n', '-i', IMAGENAME])
+    _reset_apt_caches()
+
+    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
+                    create=True) as mocked_open:
+        exit_code = cli.main(args)
+        assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
+
+    out, _ = capsys.readouterr()
+    assert exit_code == 0
+    assert json.loads(out) == _get_payload_with_packages(['-i'])
+
+
 @pytest.mark.parametrize('params', ([], ['-d']))
 def test_main_wrong_http_code(params, mocked_getfqdn, mocked_requests, caplog):
     """Calling main() when the DebMonitor server returns a wrong HTTP code should return 1."""
     args = cli.parse_args(['--config', DEBMONITOR_CLIENT_CONFIG_OK] + params)
-    mocked_requests.register_uri('POST', DEBMONITOR_UPDATE_URL, status_code=400)
+    mocked_requests.register_uri('POST', DEBMONITOR_HOST_UPDATE_URL, status_code=400)
     _reset_apt_caches()
 
     # Explicitely avoiding mocking open() due to a bug in Python 3.4.2 (jessie default version) that make it fail.
@@ -554,7 +642,7 @@ def test_main_dpkg_hook(mocked_getfqdn, mocked_requests):
     """Calling main() with -g should parse the input for a Dpkg::Pre-Install-Pkgs hook and send the update."""
     args = cli.parse_args(['--config', DEBMONITOR_CLIENT_CONFIG_OK, '-g'])
     input_lines = _get_dpkg_hook_preamble(3) + APT_HOOK_LINES[3][0:2]
-    mocked_requests.register_uri('POST', DEBMONITOR_UPDATE_URL, status_code=201)
+    mocked_requests.register_uri('POST', DEBMONITOR_HOST_UPDATE_URL, status_code=201)
     mocked_apt.cache.Cache().__getitem__.return_value = AptPackage(
         name='package-name', is_installed=False, installed=None,
         candidate=AptPkgVersion(source_name='package-name', version='1.0.0-1'))
@@ -573,7 +661,7 @@ def test_main_dpkg_hook(mocked_getfqdn, mocked_requests):
 def test_main_update_fail(mocked_getfqdn, mocked_requests, caplog):
     """Calling main() whit --update that fails the update should log the error and continue."""
     args = cli.parse_args(['--config', DEBMONITOR_CLIENT_CONFIG_OK, '--update'])
-    mocked_requests.register_uri('POST', DEBMONITOR_UPDATE_URL, status_code=201)
+    mocked_requests.register_uri('POST', DEBMONITOR_HOST_UPDATE_URL, status_code=201)
     mocked_requests.register_uri('HEAD', DEBMONITOR_CLIENT_URL, status_code=500)
     _reset_apt_caches()
 
@@ -589,10 +677,10 @@ def test_main_update_fail(mocked_getfqdn, mocked_requests, caplog):
 
 
 def test_main_update_ok(mocked_getfqdn, mocked_requests, caplog):
-    """Calling main() whit --update that succeed should update the CLI script."""
+    """Calling main() with --update that succeed should update the CLI script."""
     caplog.set_level(logging.INFO)
     args = cli.parse_args(['--config', DEBMONITOR_CLIENT_CONFIG_OK, '--update'])
-    mocked_requests.register_uri('POST', DEBMONITOR_UPDATE_URL, status_code=201)
+    mocked_requests.register_uri('POST', DEBMONITOR_HOST_UPDATE_URL, status_code=201)
     mocked_requests.register_uri(
         'HEAD', DEBMONITOR_CLIENT_URL, status_code=200, headers={cli.CLIENT_VERSION_HEADER: tests_deb.CLIENT_VERSION})
     mocked_requests.register_uri(
@@ -637,16 +725,20 @@ def _get_payload_with_packages(params):
     payload = {
         'api_version': 'v1',
         'os': OS_NAME,
-        'hostname': HOSTNAME,
-        'running_kernel': {
-            'release': KERNEL_RELEASE,
-            'version': KERNEL_VERSION,
-        },
         'installed': installed,
         'uninstalled': [],
         'upgradable': upgradable,
         'update_type': upgrade_type,
     }
+
+    if '-i' in params:
+        payload['image_name'] = IMAGENAME
+    else:
+        payload['hostname'] = HOSTNAME
+        payload['running_kernel'] = {
+            'release': KERNEL_RELEASE,
+            'version': KERNEL_VERSION,
+        }
 
     return payload
 

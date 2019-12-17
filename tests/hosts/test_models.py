@@ -1,9 +1,6 @@
-import uuid
-
 import pytest
 
 from django.core.exceptions import ValidationError
-from django.utils.text import slugify
 
 from bin_packages.models import Package
 from hosts import models
@@ -36,15 +33,6 @@ def test_hostpackage_str_no_upgrade():
     assert 'package3' in upgrade_str
     assert '3.0.0-1' in upgrade_str
     assert ' -' in upgrade_str
-
-
-def test_host_save_kernel_slug():
-    """Saving a new host should automatically populate the running_kernel_slug field."""
-    os = models.OS.objects.get(name='os1')
-    kernel = 'Running Kernel 1.0.0-1'
-    host = models.Host(name=str(uuid.uuid4()), os=os, running_kernel=kernel)
-    host.save()
-    assert host.running_kernel_slug == slugify(kernel)
 
 
 def test_disable_check_e003():

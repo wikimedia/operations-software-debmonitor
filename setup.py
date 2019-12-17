@@ -8,7 +8,7 @@ with open('README.rst', 'r') as readme:
 
 # Required dependencies
 install_requires = [
-    'Django>=2.0,<2.1.0a0',
+    'Django>=2.1,<2.2.0a0',
     'django-stronghold==0.3.0',
     'django-csp==3.4',
 ]
@@ -16,10 +16,13 @@ install_requires = [
 # Extra dependencies
 extras_require = {
     'with-mysql': [  # With MySQL support
-        'mysqlclient==1.3.12',
+        'mysqlclient==1.3.13',
     ],
     'with-ldap': [  # With LDAP support
-        'django-auth-ldap==1.6.1',
+        'django-auth-ldap==1.7.0',
+    ],
+    'with-cas': [  # With CAS support
+        'django-cas-ng==3.6.0',
     ],
     'tests': [  # Test dependencies
         'flake8>=3.5.0',
@@ -29,7 +32,7 @@ extras_require = {
         'requests-mock>=1.3.0',
     ],
 }
-extras_require['with-all'] = extras_require['with-mysql'] + extras_require['with-ldap']
+extras_require['with-all'] = extras_require['with-mysql'] + extras_require['with-ldap'] + extras_require['with-cas']
 
 setup_requires = [
     'pytest-runner>=4.2',

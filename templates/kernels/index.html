@@ -3,9 +3,9 @@
 {% block table_body %}
 {% for kernel in kernels %}
 <tr>
-  <td>{{ kernel.os__name }}</td>
+  <td>{{ kernel.os.name }}</td>
   <td>
-    <a href="{% url 'kernels:detail' kernel.running_kernel_slug %}">{{ kernel.running_kernel }}</a>
+    <a href="{% url 'kernels:detail' kernel.os.id kernel.slug %}">{{ kernel.name }}</a>
   </td>
   <td>{{ kernel.hosts_count }}</td>
 </tr>

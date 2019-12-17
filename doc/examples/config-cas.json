@@ -1,0 +1,30 @@
+{
+    "ALLOWED_HOSTS": ["localhost", "debmonitor.example.com"],
+    "SECRET_KEY": "randomly generated string",
+    "STATIC_ROOT": "/path/to/collect/static/files/",
+    "MYSQL": {
+        "DB_NAME": "debmonitor",
+        "DB_USER": "debmonitor",
+        "DB_PASSWORD": "mysql password for the DB_USER user",
+        "DB_HOST": "localhost",
+        "DB_PORT": 3306,
+        "OPTIONS": {
+            "sql_mode": "TRADITIONAL"
+        }
+    },
+    "LOG_DB_QUERIES": false,
+    "REQUIRE_LOGIN": true,
+    "VERIFY_CLIENTS": true,
+    "PROXY_HOSTS": ["host1.example.com"],
+    "PROXY_IMAGES": ["container-build.example.com"],
+    "HOST_EXTERNAL_LINKS": {
+        "InventorySite": "https://inventory.example.com/{fqdn}",
+        "OtherSite": "https://other.example.com/?q={hostname}"
+    },
+    "SEARCH_MIN_LENGTH": 3,
+    "CAS": {
+        "CAS_SERVER_URL": "https://idp.foobar.org/idp",
+        "CAS_CREATE_USER": "FALSE",
+        "CAS_VERSION": "2"
+    }
+}

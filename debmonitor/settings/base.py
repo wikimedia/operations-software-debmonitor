@@ -11,7 +11,6 @@ import json
 import os
 import sys
 
-
 # Load JSON configuration for secrets
 if os.environ.get('DEBMONITOR_CONFIG', False):
     with open(os.environ.get('DEBMONITOR_CONFIG'), 'r') as config_file:
@@ -22,6 +21,10 @@ else:
 # Debmonitor custom configuration
 DEBMONITOR_VERIFY_CLIENTS = DEBMONITOR_CONFIG.get('VERIFY_CLIENTS', True)
 DEBMONITOR_PROXY_HOSTS = DEBMONITOR_CONFIG.get('PROXY_HOSTS', [])
+DEBMONITOR_PROXY_IMAGES = DEBMONITOR_CONFIG.get('PROXY_IMAGES', [])
+DEBMONITOR_HOST_EXTERNAL_LINKS = DEBMONITOR_CONFIG.get('HOST_EXTERNAL_LINKS', {})
+DEBMONITOR_IMAGES_EXTERNAL_LINKS = DEBMONITOR_CONFIG.get('IMAGE_EXTERNAL_LINKS', {})
+DEBMONITOR_SEARCH_MIN_LENGTH = DEBMONITOR_CONFIG.get('SEARCH_MIN_LENGTH', 3)
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -39,8 +42,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'debmonitor',
     'bin_packages',
     'hosts',
+    'images',
+    'kernels',
     'src_packages',
 ]
 
@@ -53,6 +59,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'csp.middleware.CSPMiddleware',
+    'debmonitor.middleware.AuthHostMiddleware',
 ]
 
 if DEBMONITOR_CONFIG.get('REQUIRE_LOGIN', False):
@@ -77,6 +84,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'csp.context_processors.nonce',
                 'hosts.context.security_upgrade',
+                'debmonitor.context.search_min_length',
             ],
         },
     },
@@ -170,12 +178,25 @@ if DEBMONITOR_CONFIG.get('LOG_DB_QUERIES', False):
         'propagate': False,
     }
 
+
+# LDAP auth and CAS auth are mutually exclusive, if both CAS and LDAP are
+# enabled, CAS takes precedence
+if DEBMONITOR_CONFIG.get('CAS', {}):
+
+    INSTALLED_APPS.append('django_cas_ng')
+    MIDDLEWARE.append('django_cas_ng.middleware.CASMiddleware')
+
+    AUTHENTICATION_BACKENDS = (
+        'django.contrib.auth.backends.ModelBackend',
+        'django_cas_ng.backends.CASBackend',
+    )
+
+    for key, value in DEBMONITOR_CONFIG['CAS'].items():
+        setattr(sys.modules[__name__], key, value)
+
 # LDAP, dynamically load all overriden variables from the config
-
-if DEBMONITOR_CONFIG.get('LDAP', {}):
-    import ldap
-
-    from django_auth_ldap.config import LDAPSearch, GroupOfNamesType
+elif DEBMONITOR_CONFIG.get('LDAP', {}):
+    from debmonitor.settings import _ldap
 
     AUTHENTICATION_BACKENDS = ('django_auth_ldap.backend.LDAPBackend',)
     LOGGING['loggers']['django_auth_ldap'] = {
@@ -183,23 +204,11 @@ if DEBMONITOR_CONFIG.get('LDAP', {}):
         'level': 'INFO',
     }
 
-    module = sys.modules[__name__]
-    for key, value in DEBMONITOR_CONFIG.get('LDAP', {}).items():
-        if key == 'GROUP_SEARCH':
-            AUTH_LDAP_GROUP_SEARCH = LDAPSearch(value, ldap.SCOPE_SUBTREE, '(objectClass=groupOfNames)')
-            AUTH_LDAP_GROUP_TYPE = GroupOfNamesType()
-        elif key == 'USER_SEARCH':
-            AUTH_LDAP_USER_SEARCH = LDAPSearch(
-                value['SEARCH'],
-                ldap.SCOPE_ONELEVEL,
-                '({user_field}=%(user)s)'.format(user_field=value['USER_FIELD']))
-        elif key == 'GLOBAL_OPTIONS':  # Options for ldap.set_option(). Keys are ldap.OPT_* constants.
-            AUTH_LDAP_GLOBAL_OPTIONS = {getattr(ldap, opt_name): opt_value for opt_name, opt_value in value.items()}
-        else:
-            setattr(module, 'AUTH_LDAP_' + key, value)
+    for key, value in _ldap.get_settings(DEBMONITOR_CONFIG['LDAP']).items():
+        setattr(sys.modules[__name__], key, value)
 
 # Content-Security-Policy
-CSP_DEFAULT_SRC = ("'self'",)
+CSP_DEFAULT_SRC = ("'self'", "'unsafe-inline'")  # TODO: remove unsafe-inline once more widely supported by browsers.
 CSP_IMG_SRC = ("'self'", 'data:')
 CSP_OBJECT_SRC = ("'none'",)
 CSP_FRAME_SRC = ("'none'",)
