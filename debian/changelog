@@ -1,3 +1,17 @@
+debmonitor (0.2.0-1) unstable; urgency=medium
+
+  [ Riccardo Coccioli ]
+  * README: fix reST format
+
+  [ Moritz Muehlenhoff ]
+  * Add image tracking support
+  * Add image submission mode to debmonitor client
+  * Add CAS authentication to debmonitor
+  * Document database setup
+  * Bump CLI client version
+
+ -- Moritz Muehlenhoff <moritz@wikimedia.org>  Tue, 17 Dec 2019 17:10:49 +0100
+
 debmonitor (0.1.5-1) unstable; urgency=low
 
   * Upstream release v0.1.5
