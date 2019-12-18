@@ -402,8 +402,8 @@ def parse_args(argv):
     parser.add_argument('-p', '--port', default=443, type=int,
                         help='Port in which the DebMonitor server is listening. [default: 443]')
     parser.add_argument('-i', '--image-name',
-                        help='Instead of submitting host entries, record the package state of a container image'
-                             'This parameter specifies the image name and enables the image mode')
+                        help='Instead of submitting host entries, record the package state of a container image. '
+                             'This parameter specifies the image name and enables the image mode.')
     parser.add_argument('-f', '--image-file', type=json_file_type,
                         help='Load the container package data to submit from a pre-dumped JSON file.')
     parser.add_argument('-c', '--cert',
