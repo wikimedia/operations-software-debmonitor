@@ -14,7 +14,8 @@ if sys.version_info.major >= 3 and sys.version_info.minor >= 5:  # Would fail fo
 
 
 HOSTNAME = 'host1.example.com'
-IMAGENAME = 'parsoid'
+IMAGEBASENAME = 'registry.example.com/component/image-name:'
+IMAGENAME = '{base}1.2.3-1'.format(base=IMAGEBASENAME)
 STRONGHOLD_MIDDLEWARE = 'stronghold.middleware.LoginRequiredMiddleware'
 
 

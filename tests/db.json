@@ -427,7 +427,7 @@
         "model": "images.image",
         "pk": 1,
         "fields": {
-            "name": "parsoid",
+            "name": "registry.example.com/component/image-name:1.2.3-1",
             "os": 1,
             "created": "2019-10-19T14:10:09.483Z",
             "modified": "2019-10-19T14:10:09.483Z"
