@@ -13,6 +13,17 @@ from hosts.models import HostPackage, SECURITY_UPGRADE
 from images.models import ImagePackage
 
 
+def _count_items_per_version(model, package_id, count_field, filters=None):
+    """Return a dictionary with pakcage version as key and the count of field items as value for a given package."""
+    exclude = {'{field}__isnull'.format(field=count_field): True}
+    if filters is None:
+        filters = {}
+
+    return {row[count_field]: row['count'] for row in model.objects.select_related(None).filter(
+        package=package_id, **filters).exclude(**exclude).values(count_field).annotate(count=Count(
+            count_field)).order_by(count_field)}
+
+
 @require_safe
 def index(request):
     """Binary packages list page."""
@@ -83,43 +94,46 @@ def index(request):
 @require_safe
 def detail(request, name):
     """Binary package detail page."""
-    package_versions = PackageVersion.objects.filter(package__name=name).annotate(
-        hosts_count=Count('installed_hosts', distinct=True),
-        upgrades_count=Count('upgradable_hosts', distinct=True),
-        images_count=Count('installed_images', distinct=True),
-        img_upgrades_count=Count('upgradable_images', distinct=True))
-
+    package_versions = PackageVersion.objects.filter(package__name=name)
     if not package_versions:
         raise Http404
 
+    package_id = package_versions[0].package
+    counters = {'hosts': {}, 'images': {}}
+    counters['hosts']['package_version'] = _count_items_per_version(HostPackage, package_id, 'package_version')
+    counters['hosts']['upgradable_version'] = _count_items_per_version(HostPackage, package_id, 'upgradable_version')
+    counters['hosts']['security_upgrades'] = _count_items_per_version(
+        HostPackage, package_id, 'upgradable_version', filters={'upgrade_type': SECURITY_UPGRADE})
+    counters['images']['package_version'] = _count_items_per_version(ImagePackage, package_id, 'package_version')
+    counters['images']['upgradable_version'] = _count_items_per_version(
+        ImagePackage, package_id, 'upgradable_imageversion')
+    counters['images']['security_upgrades'] = _count_items_per_version(
+        ImagePackage, package_id, 'upgradable_imageversion', filters={'upgrade_type': SECURITY_UPGRADE})
+
     host_packages = HostPackage.objects.filter(package__name=name)
     image_packages = ImagePackage.objects.filter(package__name=name)
-
-    upgrades_host = HostPackage.objects.select_related(None).filter(
-        package__name=name, upgrade_type=SECURITY_UPGRADE).values('upgradable_version').annotate(
-        Count('host', distinct=True)).order_by('upgradable_version')
-    upgrades_img = ImagePackage.objects.select_related(None).filter(
-        package__name=name, upgrade_type=SECURITY_UPGRADE).values('upgradable_imageversion').annotate(
-        Count('image', distinct=True)).order_by('upgradable_imageversion')
-    security_upgrades_host = {upgrade['upgradable_version']: upgrade['host__count'] for upgrade in upgrades_host}
-    security_upgrades_img = {upgrade['upgradable_imageversion']: upgrade['image__count'] for upgrade in upgrades_img}
 
     os_versions = OrderedDict()
     src_packages_versions = set()
     for package_version in package_versions:
         os = package_version.os.name
         ver = package_version.version
+        ver_id = package_version.id
 
         if os not in os_versions:
             os_versions[os] = {'versions': OrderedDict(), 'totals': {}}
 
         os_versions[os]['versions'][ver] = defaultdict(int)
-        os_versions[os]['versions'][ver]['installed'] += package_version.hosts_count
-        os_versions[os]['versions'][ver]['installed'] += package_version.images_count
-        os_versions[os]['versions'][ver]['upgradable'] += package_version.upgrades_count
-        os_versions[os]['versions'][ver]['upgradable'] += package_version.img_upgrades_count
-        os_versions[os]['versions'][ver]['security'] += security_upgrades_host.get(package_version.id, 0)
-        os_versions[os]['versions'][ver]['security'] += security_upgrades_img.get(package_version.id, 0)
+        os_versions[os]['versions'][ver]['installed'] += (
+            counters['hosts']['package_version'].get(ver_id, 0)
+            + counters['images']['package_version'].get(ver_id, 0))
+        os_versions[os]['versions'][ver]['upgradable'] += (
+            counters['hosts']['upgradable_version'].get(ver_id, 0)
+            + counters['images']['upgradable_version'].get(ver_id, 0))
+        os_versions[os]['versions'][ver]['security'] += (
+            counters['hosts']['security_upgrades'].get(ver_id, 0)
+            + counters['images']['security_upgrades'].get(ver_id, 0))
+
         src_packages_versions.add(package_version.src_package_version.src_package.name)
 
     for os_data in os_versions.values():
