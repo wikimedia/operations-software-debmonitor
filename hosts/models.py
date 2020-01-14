@@ -84,6 +84,7 @@ class HostPackage(models.Model):
     class Meta:
         """Additional metadata."""
 
+        indexes = [models.Index(fields=['upgrade_type', 'upgradable_package'])]
         ordering = ['host__name', 'package__name', 'package_version__version']
         unique_together = ('host', 'package')
         verbose_name = 'host package'
