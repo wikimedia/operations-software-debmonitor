@@ -4,11 +4,7 @@ set -e
 
 case "$1" in
   configure)
-    # Add debmonitor system user
-    if ! getent passwd debmonitor > /dev/null; then
-        adduser --quiet --system --no-create-home --home /nonexistent \
-            --group --gecos "DebMonitor system user" debmonitor || true
-    fi
+    systemd-sysusers
 
     # If the DebMonitor has been prepopulated (e.g. when using a configuration
     # management system), ingest all packages
