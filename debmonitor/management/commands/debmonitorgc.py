@@ -14,15 +14,25 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Run the garbage collection."""
-        res = PackageVersion.objects.select_related(None).annotate(
-            hosts_count=Count('installed_hosts', distinct=True)).annotate(
-            upgrades_count=Count('upgradable_hosts', distinct=True)).annotate(
-            images_count=Count('installed_images', distinct=True)
-            ).filter(hosts_count=0, upgrades_count=0, images_count=0).order_by().delete()
+        # Searching the packages to delete in Python as doing it in a single query makes it explode in terms of explain
+        sets = []
+        for column in ('installed_hosts', 'upgradable_hosts', 'installed_images', 'upgradable_images'):
+            sets.append(set(
+                PackageVersion.objects.select_related(None).annotate(
+                    count=Count(column, distinct=True)).filter(count=0)))
+
+        primary_keys = [pkg.pk for pkg in set.intersection(*sets)]
+
+        # Delete in chunks of 1000 package versions at a time
+        primary_keys_groups = [primary_keys[i:i + 1000] for i in range(0, len(primary_keys), 1000)]
+        res = 0
+        for primary_keys_group in primary_keys_groups:
+            partial_res = PackageVersion.objects.select_related(None).filter(pk__in=primary_keys_group).delete()
+            res += partial_res[0]
 
         self.stdout.write(self.style.SUCCESS(
             'Deleted {count} PackageVersion objects not referenced by any HostPackage or ImagePackage'.
-            format(count=res[0])))
+            format(count=res)))
 
         res = Package.objects.select_related(None).annotate(
             versions_count=Count('versions', distinct=True)).filter(versions_count=0).order_by().delete()
