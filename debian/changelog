@@ -1,3 +1,19 @@
+debmonitor (0.2.5-1) unstable; urgency=medium
+
+  [ Riccardo Coccioli ]
+  * GC: fix garbage collection and refactor its query
+  * hosts/images packages: optimize tables
+  * binary packages: optimize queries (part 2)
+  * binary packages: optimize queries
+  * images: fix authentication
+  * Images: add support for names with slashes
+  * CLI: fix typo in help message.
+
+  [ Moritz Muehlenhoff ]
+  * Create debmonitor-client system user using systemd-sysusers
+
+ -- Moritz Mühlenhoff <moritz@wikimedia.org>  Wed, 10 Jun 2020 16:56:01 +0200
+
 debmonitor (0.2.0-1) unstable; urgency=medium
 
   [ Riccardo Coccioli ]
