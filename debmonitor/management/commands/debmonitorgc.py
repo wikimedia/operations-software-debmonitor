@@ -1,8 +1,12 @@
+from datetime import timedelta
+
 from django.core.management.base import BaseCommand
 from django.db.models import Count
+from django.utils import timezone
 
 from bin_packages.models import Package, PackageVersion
 from kernels.models import KernelVersion
+from images.models import Image
 from src_packages.models import SrcPackage, SrcPackageVersion
 
 
@@ -14,6 +18,13 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Run the garbage collection."""
+        # GC old images until they will be deleted when deprecated externally from Debmonitor
+        res = Image.objects.select_related(None).filter(modified__lt=timezone.now() - timedelta(days=90)).delete()
+        # Using len(res[1]) here because the Django reported number of deleted objects includes also the ones deleted
+        # by cascade constrains, notably all the ImagePackage related objects.
+        self.stdout.write(self.style.SUCCESS(
+            'Deleted {count} Image objects not updated in the last 90 days'.format(count=len(res[1]))))
+
         # Searching the packages to delete in Python as doing it in a single query makes it explode in terms of explain
         sets = []
         for column in ('installed_hosts', 'upgradable_hosts', 'installed_images', 'upgradable_images'):
