@@ -20,10 +20,14 @@ class Command(BaseCommand):
         """Run the garbage collection."""
         # GC old images until they will be deleted when deprecated externally from Debmonitor
         res = Image.objects.select_related(None).filter(modified__lt=timezone.now() - timedelta(days=90)).delete()
-        # Using len(res[1]) here because the Django reported number of deleted objects includes also the ones deleted
-        # by cascade constrains, notably all the ImagePackage related objects.
+        # Getting the specific counter of Images deleted because the Django reported total number of deleted objects
+        # includes also the ones deleted by cascade constrains like the ImagePackage objects.
+        # The returned structure is:
+        # (total_deleted_objects, {object_type: deleted_objects, ...})
+        # (828, {'images.Image': 5, 'images.ImagePackage': 823})
         self.stdout.write(self.style.SUCCESS(
-            'Deleted {count} Image objects not updated in the last 90 days'.format(count=len(res[1]))))
+            'Deleted {count} Image objects not updated in the last 90 days'.format(
+                count=res[1].get('images.Image', 0))))
 
         # Searching the packages to delete in Python as doing it in a single query makes it explode in terms of explain
         sets = []
