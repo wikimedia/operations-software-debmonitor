@@ -85,14 +85,17 @@ except ImportError:  # pragma: py3 no cover - Backward compatibility with Python
 import apt
 import requests
 
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # The client version is based on the server's major.minor version plus a dedicated client-specific incremental number.
-__version__ = '0.2client1'
+__version__ = '0.2client2'
 
 SUPPORTED_API_VERSIONS = ('v1',)
 CLIENT_VERSION_HEADER = 'X-Debmonitor-Client-Version'
 CLIENT_CHECKSUM_HEADER = 'X-Debmonitor-Client-Checksum'
 OS_RELEASE_FILE = '/etc/os-release'
+REQUEST_TIMEOUT = 3
 logger = logging.getLogger('debmonitor')
 AptLineV2 = namedtuple('LineV2', ['name', 'version_from', 'direction', 'version_to', 'action'])
 AptLineV3 = namedtuple('LineV3', ['name', 'version_from', 'arch_from', 'multiarch_from', 'direction', 'version_to',
@@ -294,6 +297,30 @@ def parse_apt_line(update_line, cache, version=3):
     return group, package
 
 
+def get_http_adapter():
+    """create and return a http adapter with a more fine grained retry strategy
+
+    This adds POST to the listy of methods to retry as well as  the following
+    http codes to the retry list:
+        * 429, 500, 502, 503, 504
+    """
+
+    retry_strategy = Retry(
+        total=3,
+        backoff_factor=60,
+        status_forcelist=[429, 500, 502, 503, 504],
+        method_whitelist=['HEAD', 'GET', 'PUT', 'DELETE', 'OPTIONS', 'TRACE', 'POST'],
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    http = requests.Session()
+    http.headers.update({
+        'User-Agent': 'debmonitor-client/{ver} +https://wikitech.wikimedia.org/wiki/Debmonitor'
+        .format(ver=__version__)
+    })
+    http.mount("https://", adapter)
+    return http
+
+
 def self_update(base_url, cert, verify):
     """Check if the DebMonitor server has a different version of this script and automatically self-overwrite it.
 
@@ -309,7 +336,8 @@ def self_update(base_url, cert, verify):
         RuntimeError: if no remote version is found or there is a checksum mismatch or a wrong HTTP status code.
     """
     client_url = '{base_url}/client'.format(base_url=base_url)
-    response = requests.head(client_url, cert=cert, verify=verify)
+    http = get_http_adapter()
+    response = http.head(client_url, cert=cert, verify=verify, timeout=REQUEST_TIMEOUT)
     if response.status_code != requests.status_codes.codes.ok:
         raise RuntimeError('Unable to check remote script version, got HTTP {retcode}, expected 200 OK.'.format(
             retcode=response.status_code))
@@ -324,7 +352,7 @@ def self_update(base_url, cert, verify):
         return
 
     logger.info('Found new remote version %s, current version is %s. Updating.', version, __version__)
-    response = requests.get(client_url, cert=cert, verify=verify)
+    response = http.get(client_url, cert=cert, verify=verify, timeout=REQUEST_TIMEOUT)
     if response.status_code != requests.status_codes.codes.ok:
         raise RuntimeError('Unable to download remote script, got HTTP {retcode}, expected 200 OK.'.format(
             retcode=response.status_code))
@@ -538,7 +566,8 @@ def run(args, input_lines=None):
     elif args.cert is not None:
         cert = args.cert
 
-    response = requests.post(url, cert=cert, json=payload, verify=args.verify)
+    http = get_http_adapter()
+    response = http.post(url, cert=cert, json=payload, verify=args.verify, timeout=REQUEST_TIMEOUT)
     if response.status_code != requests.status_codes.codes.created:
         raise RuntimeError('Failed to send the update to the DebMonitor server: {status} {body}'.format(
             status=response.status_code, body=response.text))
