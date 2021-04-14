@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # ----------------------------------------------------------------------------
 # DebMonitor CLI - Debian packages tracker CLI
 # Copyright (C) 2017-2018  Riccardo Coccioli <rcoccioli@wikimedia.org>
@@ -23,13 +23,12 @@ DebMonitor CLI - Debian packages tracker CLI.
 Automatically collect the current status of all installed and upgradable packages and report it to a DebMonitor server.
 It can report all installed and upgradable packages, just the upgradable ones, or the changes reported by a Dpkg hook.
 
-This script was tested with Python 2.7, 3.4, 3.5, 3.6.
+This script was tested with Python 3.4, 3.5, 3.6, 3.7, 3.8 & 3.9
 
-* Install the following Debian packages dependencies, choosing either the Python2 or the Python3 variant based on which
-  version of Python will be used to run this script:
+* Install the following Debian packages dependencies
 
-  * python-apt
-  * python-requests
+  * python3-apt
+  * python3-requests
 
 * Deploy this standalone CLI script across the fleet, for example into ``/usr/local/bin/debmonitor``, and make it
   executable, optionally modifying the shebang to force a specific Python version. The script can also be downloaded
@@ -68,19 +67,8 @@ import socket
 import sys
 
 from collections import namedtuple
-
-try:
-    from configparser import ConfigParser, Error as ConfigParserError
-except ImportError:  # pragma: py3 no cover - Backward compatibility with Python 2.7
-    # This except block is not actually covered by tests because the 3rd party test dependency module 'pytest-cov'
-    # has as a dependency the 3rd party module 'configparser' that exposes on Python 2 the stdlib module 'ConfigParser'
-    # as 'configparser', not allowing the tests to actually enter this block.
-    from ConfigParser import SafeConfigParser as ConfigParser, Error as ConfigParserError
-
-try:
-    from json.decoder import JSONDecodeError
-except ImportError:  # pragma: py3 no cover - Backward compatibility with Python 2.7
-    JSONDecodeError = ValueError
+from configparser import ConfigParser, Error as ConfigParserError
+from json.decoder import JSONDecodeError
 
 import apt
 import requests
@@ -89,7 +77,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 # The client version is based on the server's major.minor version plus a dedicated client-specific incremental number.
-__version__ = '0.2client2'
+__version__ = '0.3client1'
 
 SUPPORTED_API_VERSIONS = ('v1',)
 CLIENT_VERSION_HEADER = 'X-Debmonitor-Client-Version'
@@ -106,7 +94,7 @@ logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 
 class AptInstalledFilter(apt.cache.Filter):
-    """Filter class for python-apt to filter only installed packages."""
+    """Filter class for python3-apt to filter only installed packages."""
 
     def apply(self, pkg):
         """Filter only installed packages.
