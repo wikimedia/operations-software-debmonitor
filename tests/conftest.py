@@ -2,19 +2,16 @@ import sys
 
 import pytest
 import requests_mock
-
-try:  # Python3
-    import unittest.mock as mock
-except ImportError:  # Python2
-    import mock
+import unittest.mock as mock
 
 
-if sys.version_info.major >= 3 and sys.version_info.minor >= 5:  # Would fail for CLI tests in Python 2.7 and 3.4
+if sys.version_info.major >= 3 and sys.version_info.minor >= 5:  # Would fail for CLI tests in Python 3.4
     from django.core.management import call_command
 
 
 HOSTNAME = 'host1.example.com'
-IMAGENAME = 'parsoid'
+IMAGEBASENAME = 'registry.example.com/component/image-name:'
+IMAGENAME = '{base}1.2.3-1'.format(base=IMAGEBASENAME)
 STRONGHOLD_MIDDLEWARE = 'stronghold.middleware.LoginRequiredMiddleware'
 
 

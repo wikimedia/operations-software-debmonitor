@@ -91,7 +91,7 @@ class AuthHostMiddleware(object):
 
         # For image submissions we don't validate the host name, but only whether the image data
         # is submitted from a valid proxy host
-        if view_func.__name__ == 'update_image':
+        if view_func.__module__ == 'images.views':
             if not is_valid_image_proxy(cn):
                 return HttpResponseForbidden("Unauthorized to modify image '{name}' with certificate '{dn}'".format(
                     name=view_kwargs['name'], dn=ssl_dn), content_type=TEXT_PLAIN)

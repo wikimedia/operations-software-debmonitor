@@ -9,7 +9,7 @@ from django.urls import resolve, reverse
 # from debmonitor import middleware
 from images import views
 from images.models import Image, ImagePackage
-from tests.conftest import IMAGENAME, setup_auth_settings, validate_status_code
+from tests.conftest import IMAGEBASENAME, IMAGENAME, setup_auth_settings, validate_status_code
 
 
 INDEX_URL = '/images/'
@@ -20,7 +20,7 @@ PAYLOAD_NEW_OK = """{
     "api_version": "v1",
     "update_type": "full",
     "os": "os1",
-    "image_name": "%(uuid)s",
+    "image_name": "%(imagebasename)s%(uuid)s",
     "installed": [
         {"name": "pkg1-%(uuid)s", "version": "1.0.0-1", "source": "pkg1-%(uuid)s"},
         {"name": "pkg2-%(uuid)s", "version": "1.0.0-1", "source": "pkg2-%(uuid)s"},
@@ -31,7 +31,7 @@ PAYLOAD_EXISTING_NO_UPDATE = """{
     "api_version": "v1",
     "update_type": "full",
     "os": "os1",
-    "image_name": "parsoid",
+    "image_name": "%(imagename)s",
     "installed": [
         {"name": "package1", "version": "1.0.0-1", "source": "package1"},
         {"name": "package2", "version": "2.0.0-1", "source": "package2"}
@@ -41,7 +41,7 @@ PAYLOAD_EXISTING_UPDATE = """{
     "api_version": "v1",
     "update_type": "full",
     "os": "os1",
-    "image_name": "parsoid",
+    "image_name": "%(imagename)s",
     "installed": [
         {"name": "package1", "version": "1.0.0-1", "source": "package1"},
         {"name": "package2", "version": "2.0.0-2", "source": "package2"},
@@ -50,13 +50,13 @@ PAYLOAD_EXISTING_UPDATE = """{
 }"""
 PAYLOAD_NEW_BROKEN = """{
     "os": "os1",
-    "image_name": "%(uuid)s"
+    "image_name": "%(imagebasename)s%(uuid)s"
 }"""
 PAYLOAD_UPGRADABLE = """{
     "api_version": "v1",
     "update_type": "upgradable",
     "os": "os1",
-    "image_name": "parsoid",
+    "image_name": "%(imagename)s",
     "upgradable": [
         {"name": "package1", "version_from": "1.0.0-1", "version_to": "1.0.0-2", "source": "package1", "type": ""},
         {"name": "pkg3-%(uuid)s", "version_from": "1.0.0-1", "version_to": "1.0.0-2", "source": "pkg3-%(uuid)s",
@@ -87,7 +87,7 @@ def test_index_view_function():
 
 def test_detail_reverse_url_existing():
     """Reversing an existing image detail page URL name should return the correct URL."""
-    url = reverse('images:detail', kwargs={'name': 'parsoid'})
+    url = reverse('images:detail', kwargs={'name': IMAGENAME})
     assert url == EXISTING_IMAGE_URL
 
 
@@ -146,7 +146,7 @@ def test_detail_delete_status_code_missing(client, settings, require_login, veri
 
 def test_update_reverse_url_existing():
     """Reversing an existing image update URL name should return the correct URL."""
-    url = reverse('images:update', kwargs={'name': 'parsoid'})
+    url = reverse('images:update', kwargs={'name': IMAGENAME})
     assert url == EXISTING_IMAGE_UPDATE_URL
 
 
@@ -183,7 +183,7 @@ def test_update_status_code_wrong_imagename(client, settings, require_login, ver
 def test_update_status_code_invalid_os(client):
     """Trying to update an image with a payload with an invalid OS should return 400 Bad Request."""
     response = client.generic(
-        'POST', EXISTING_IMAGE_UPDATE_URL, '{"image_name": "parsoid", "os": "invalid_os"}')
+        'POST', EXISTING_IMAGE_UPDATE_URL, '{"image_name": "imagename", "os": "invalid_os"}')
     assert response.status_code == 400
 
 
@@ -191,7 +191,9 @@ def test_update_status_code_invalid_os(client):
 def test_update_status_code_new_image_ok(client):
     """Updating a non existing image with a correct payload should return 201 Created."""
     rand = str(uuid.uuid4())
-    response = client.generic('POST', '/images/{uuid}/update'.format(uuid=rand), PAYLOAD_NEW_OK % {'uuid': rand})
+    response = client.generic(
+        'POST', '/images/{imagebasename}{uuid}/update'.format(imagebasename=IMAGEBASENAME, uuid=rand),
+        PAYLOAD_NEW_OK % {'uuid': rand, 'imagebasename': IMAGEBASENAME})
     assert response.status_code == 201
 
 
@@ -199,14 +201,16 @@ def test_update_status_code_new_image_ok(client):
 def test_update_status_code_new_image_ko(client):
     """Updating a non existing image with an incorrect payload should return 400 Bad Request."""
     rand = str(uuid.uuid4())
-    response = client.generic('POST', '/images/{uuid}/update'.format(uuid=rand), PAYLOAD_NEW_BROKEN % {'uuid': rand})
+    response = client.generic(
+        'POST', '/images/{imagebasename}{uuid}/update'.format(imagebasename=IMAGEBASENAME, uuid=rand),
+        PAYLOAD_NEW_BROKEN % {'uuid': rand, 'imagebasename': IMAGENAME})
     assert response.status_code == 400
 
 
 @pytest.mark.django_db
 def test_update_status_code_existing_no_update(client):
     """Updating an existing image with a correct payload with no update should return 201 Created."""
-    response = client.generic('POST', EXISTING_IMAGE_UPDATE_URL, PAYLOAD_EXISTING_NO_UPDATE)
+    response = client.generic('POST', EXISTING_IMAGE_UPDATE_URL, PAYLOAD_EXISTING_NO_UPDATE % {'imagename': IMAGENAME})
     assert response.status_code == 201
 
 
@@ -214,7 +218,8 @@ def test_update_status_code_existing_no_update(client):
 def test_update_status_code_existing_update(client):
     """Updating an existing image with a correct payload with updates should return 201 Created."""
     rand = str(uuid.uuid4())
-    response = client.generic('POST', EXISTING_IMAGE_UPDATE_URL, PAYLOAD_EXISTING_UPDATE % {'uuid': rand})
+    response = client.generic('POST', EXISTING_IMAGE_UPDATE_URL,
+                              PAYLOAD_EXISTING_UPDATE % {'uuid': rand, 'imagename': IMAGENAME})
     assert response.status_code == 201
 
 
@@ -223,7 +228,8 @@ def test_update_status_code_existing_update(client):
 def test_update_raise(mocked_update_v1, client):
     """If the update raise an exception, a plain/text 500 should be returned."""
     rand = str(uuid.uuid4())
-    response = client.generic('POST', EXISTING_IMAGE_UPDATE_URL, PAYLOAD_EXISTING_UPDATE % {'uuid': rand})
+    response = client.generic('POST', EXISTING_IMAGE_UPDATE_URL,
+                              PAYLOAD_EXISTING_UPDATE % {'uuid': rand, 'imagename': IMAGENAME})
     assert response.status_code == 500
     assert 'Unable to update image' in response.content.decode('utf-8')
     assert response['Content-Type'] == 'text/plain'

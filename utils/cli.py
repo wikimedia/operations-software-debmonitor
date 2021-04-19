@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # ----------------------------------------------------------------------------
 # DebMonitor CLI - Debian packages tracker CLI
 # Copyright (C) 2017-2018  Riccardo Coccioli <rcoccioli@wikimedia.org>
@@ -23,13 +23,12 @@ DebMonitor CLI - Debian packages tracker CLI.
 Automatically collect the current status of all installed and upgradable packages and report it to a DebMonitor server.
 It can report all installed and upgradable packages, just the upgradable ones, or the changes reported by a Dpkg hook.
 
-This script was tested with Python 2.7, 3.4, 3.5, 3.6.
+This script was tested with Python 3.4, 3.5, 3.6, 3.7, 3.8 & 3.9
 
-* Install the following Debian packages dependencies, choosing either the Python2 or the Python3 variant based on which
-  version of Python will be used to run this script:
+* Install the following Debian packages dependencies
 
-  * python-apt
-  * python-requests
+  * python3-apt
+  * python3-requests
 
 * Deploy this standalone CLI script across the fleet, for example into ``/usr/local/bin/debmonitor``, and make it
   executable, optionally modifying the shebang to force a specific Python version. The script can also be downloaded
@@ -68,31 +67,23 @@ import socket
 import sys
 
 from collections import namedtuple
-
-try:
-    from configparser import ConfigParser, Error as ConfigParserError
-except ImportError:  # pragma: py3 no cover - Backward compatibility with Python 2.7
-    # This except block is not actually covered by tests because the 3rd party test dependency module 'pytest-cov'
-    # has as a dependency the 3rd party module 'configparser' that exposes on Python 2 the stdlib module 'ConfigParser'
-    # as 'configparser', not allowing the tests to actually enter this block.
-    from ConfigParser import SafeConfigParser as ConfigParser, Error as ConfigParserError
-
-try:
-    from json.decoder import JSONDecodeError
-except ImportError:  # pragma: py3 no cover - Backward compatibility with Python 2.7
-    JSONDecodeError = ValueError
+from configparser import ConfigParser, Error as ConfigParserError
+from json.decoder import JSONDecodeError
 
 import apt
 import requests
 
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # The client version is based on the server's major.minor version plus a dedicated client-specific incremental number.
-__version__ = '0.2client1'
+__version__ = '0.2client3'
 
 SUPPORTED_API_VERSIONS = ('v1',)
 CLIENT_VERSION_HEADER = 'X-Debmonitor-Client-Version'
 CLIENT_CHECKSUM_HEADER = 'X-Debmonitor-Client-Checksum'
 OS_RELEASE_FILE = '/etc/os-release'
+REQUEST_TIMEOUT = 3
 logger = logging.getLogger('debmonitor')
 AptLineV2 = namedtuple('LineV2', ['name', 'version_from', 'direction', 'version_to', 'action'])
 AptLineV3 = namedtuple('LineV3', ['name', 'version_from', 'arch_from', 'multiarch_from', 'direction', 'version_to',
@@ -103,7 +94,7 @@ logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 
 class AptInstalledFilter(apt.cache.Filter):
-    """Filter class for python-apt to filter only installed packages."""
+    """Filter class for python3-apt to filter only installed packages."""
 
     def apply(self, pkg):
         """Filter only installed packages.
@@ -294,6 +285,30 @@ def parse_apt_line(update_line, cache, version=3):
     return group, package
 
 
+def get_http_adapter():
+    """create and return a http adapter with a more fine grained retry strategy
+
+    This adds POST to the listy of methods to retry as well as  the following
+    http codes to the retry list:
+        * 429, 500, 502, 503, 504
+    """
+
+    retry_strategy = Retry(
+        total=3,
+        backoff_factor=60,
+        status_forcelist=[429, 500, 502, 503, 504],
+        method_whitelist=['HEAD', 'GET', 'PUT', 'DELETE', 'OPTIONS', 'TRACE', 'POST'],
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    http = requests.Session()
+    http.headers.update({
+        'User-Agent': 'debmonitor-client/{ver} +https://wikitech.wikimedia.org/wiki/Debmonitor'
+        .format(ver=__version__)
+    })
+    http.mount("https://", adapter)
+    return http
+
+
 def self_update(base_url, cert, verify):
     """Check if the DebMonitor server has a different version of this script and automatically self-overwrite it.
 
@@ -309,7 +324,8 @@ def self_update(base_url, cert, verify):
         RuntimeError: if no remote version is found or there is a checksum mismatch or a wrong HTTP status code.
     """
     client_url = '{base_url}/client'.format(base_url=base_url)
-    response = requests.head(client_url, cert=cert, verify=verify)
+    http = get_http_adapter()
+    response = http.head(client_url, cert=cert, verify=verify, timeout=REQUEST_TIMEOUT)
     if response.status_code != requests.status_codes.codes.ok:
         raise RuntimeError('Unable to check remote script version, got HTTP {retcode}, expected 200 OK.'.format(
             retcode=response.status_code))
@@ -324,7 +340,7 @@ def self_update(base_url, cert, verify):
         return
 
     logger.info('Found new remote version %s, current version is %s. Updating.', version, __version__)
-    response = requests.get(client_url, cert=cert, verify=verify)
+    response = http.get(client_url, cert=cert, verify=verify, timeout=REQUEST_TIMEOUT)
     if response.status_code != requests.status_codes.codes.ok:
         raise RuntimeError('Unable to download remote script, got HTTP {retcode}, expected 200 OK.'.format(
             retcode=response.status_code))
@@ -402,8 +418,8 @@ def parse_args(argv):
     parser.add_argument('-p', '--port', default=443, type=int,
                         help='Port in which the DebMonitor server is listening. [default: 443]')
     parser.add_argument('-i', '--image-name',
-                        help='Instead of submitting host entries, record the package state of a container image'
-                             'This parameter specifies the image name and enables the image mode')
+                        help='Instead of submitting host entries, record the package state of a container image. '
+                             'This parameter specifies the image name and enables the image mode.')
     parser.add_argument('-f', '--image-file', type=json_file_type,
                         help='Load the container package data to submit from a pre-dumped JSON file.')
     parser.add_argument('-c', '--cert',
@@ -538,7 +554,8 @@ def run(args, input_lines=None):
     elif args.cert is not None:
         cert = args.cert
 
-    response = requests.post(url, cert=cert, json=payload, verify=args.verify)
+    http = get_http_adapter()
+    response = http.post(url, cert=cert, json=payload, verify=args.verify, timeout=REQUEST_TIMEOUT)
     if response.status_code != requests.status_codes.codes.created:
         raise RuntimeError('Failed to send the update to the DebMonitor server: {status} {body}'.format(
             status=response.status_code, body=response.text))

@@ -84,6 +84,7 @@ class ImagePackage(models.Model):
     class Meta:
         """Additional metadata."""
 
+        indexes = [models.Index(fields=['upgrade_type', 'upgradable_imagepackage'])]
         ordering = ['image__name', 'package__name', 'package_version__version']
         unique_together = ('image', 'package')
         verbose_name = 'image package'
