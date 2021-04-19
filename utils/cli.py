@@ -77,7 +77,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 # The client version is based on the server's major.minor version plus a dedicated client-specific incremental number.
-__version__ = '0.3client1'
+__version__ = '0.2client3'
 
 SUPPORTED_API_VERSIONS = ('v1',)
 CLIENT_VERSION_HEADER = 'X-Debmonitor-Client-Version'
