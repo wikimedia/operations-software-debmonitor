@@ -1,3 +1,17 @@
+debmonitor (0.2.8-1) unstable; urgency=medium
+
+  [ John Bond ]
+  * Drop python2 support
+  * Improve retry logic in the client
+
+  [ Riccardo Coccioli ]
+  * Upstream release v0.2.8
+  * Remove debian/patches to force the Python3 executable, now included
+    upstream
+  * Bump compat version
+
+ -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Mon, 19 Apr 2021 15:30:01 +0200
+
 debmonitor (0.2.5-1) unstable; urgency=medium
 
   [ Riccardo Coccioli ]

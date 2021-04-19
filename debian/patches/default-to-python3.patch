@@ -1,8 +1,0 @@
---- debmonitor-1.3.orig/utils/cli.py
-+++ debmonitor-1.3/utils/cli.py
-@@ -1,4 +1,4 @@
--#!/usr/bin/env python
-+#!/usr/bin/env python3
- # ----------------------------------------------------------------------------
- # DebMonitor CLI - Debian packages tracker CLI
- # Copyright (C) 2017-2018  Riccardo Coccioli <rcoccioli@wikimedia.org>
