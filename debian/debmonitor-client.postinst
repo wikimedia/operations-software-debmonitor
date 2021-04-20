@@ -4,7 +4,11 @@ set -e
 
 case "$1" in
   configure)
-    systemd-sysusers
+    # docker images don't have systemd-sysusers as such just ignore errors
+    if command -v systemd-sysusers &> /dev/null
+    then
+      systemd-sysusers
+    fi
 
     # If the DebMonitor has been prepopulated (e.g. when using a configuration
     # management system), ingest all packages
