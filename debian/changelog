@@ -1,4 +1,4 @@
-debmonitor (0.2.8-1) unstable; urgency=medium
+debmonitor (0.2.8-2) unstable; urgency=medium
 
   [ John Bond ]
   * Ignore missing systemd-sysuseres in post-install
