@@ -68,16 +68,20 @@ import sys
 
 from collections import namedtuple
 from configparser import ConfigParser, Error as ConfigParserError
-from json.decoder import JSONDecodeError
+
+try:
+    from json.decoder import JSONDecodeError
+except ImportError:  # pragma: py3 no cover - Backward compatibility with Python 3.4
+    JSONDecodeError = ValueError
 
 import apt
 import requests
 
 from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+from requests.packages.urllib3.util.retry import Retry
 
 # The client version is based on the server's major.minor version plus a dedicated client-specific incremental number.
-__version__ = '0.2client3'
+__version__ = '0.2client4'
 
 SUPPORTED_API_VERSIONS = ('v1',)
 CLIENT_VERSION_HEADER = 'X-Debmonitor-Client-Version'
