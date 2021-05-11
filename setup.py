@@ -8,21 +8,21 @@ with open('README.rst', 'r') as readme:
 
 # Required dependencies
 install_requires = [
-    'Django>=2.1,<2.2.0a0',
-    'django-stronghold==0.3.0',
-    'django-csp==3.4',
+    'Django>=2.2,<2.3.0a0',
+    'django-stronghold',
+    'django-csp',
 ]
 
 # Extra dependencies
 extras_require = {
     'with-mysql': [  # With MySQL support
-        'mysqlclient==1.3.13',
+        'mysqlclient',
     ],
     'with-ldap': [  # With LDAP support
-        'django-auth-ldap==1.7.0',
+        'django-auth-ldap',
     ],
     'with-cas': [  # With CAS support
-        'django-cas-ng==3.6.0',
+        'django-cas-ng',
     ],
     'tests': [  # Test dependencies
         'flake8>=3.5.0',
