@@ -31,7 +31,22 @@ with mock.patch.dict(sys.modules, {'apt': mocked_apt, 'platform': mocked_platfor
     from utils import cli
 
 
-AptPackage = namedtuple('AptPackage', ['name', 'is_installed', 'installed', 'candidate'])
+# TODO: convert to a dataclass once Python 3.7+ only are supported
+class AptPackage:
+    """A class to mock an APT package in the apt library."""
+
+    def __init__(self, name, is_installed=True, installed=None, candidate=None):
+        """Initialize the instance."""
+        self.name = name
+        self.is_installed = is_installed
+        self.installed = installed
+        self.candidate = candidate
+        self.versions = {}
+        for version in (installed, candidate):
+            if version is not None:
+                self.versions[version.version] = version
+
+
 AptPkgVersion = namedtuple('AptPkgVersion', ['source_name', 'version'])
 DEBMONITOR_SERVER = 'debmonitor.example.com'
 DEBMONITOR_BASE_URL = 'https://{server}:443'.format(server=DEBMONITOR_SERVER)
@@ -110,22 +125,18 @@ APT_LINES_TO_PARSE = [
     (3, 8, 'uninstalled', 'package-name', '1.0.0-1'),
 ]
 APT_PACKAGES = [
-    AptPackage(name='package1', is_installed=True, installed=AptPkgVersion(source_name='package1', version='1.0.0-1'),
-               candidate=None),
-    AptPackage(name='package21', is_installed=True, installed=AptPkgVersion(source_name='package2', version='1.0.0-1'),
-               candidate=None),
-    AptPackage(name='package22', is_installed=True, installed=AptPkgVersion(source_name='package2', version='1.0.0-1'),
-               candidate=None),
-    AptPackage(name='package3', is_installed=True, installed=AptPkgVersion(source_name='package31', version='1.0.0-1'),
-               candidate=None),
+    AptPackage(name='package1', installed=AptPkgVersion(source_name='package1', version='1.0.0-1')),
+    AptPackage(name='package21', installed=AptPkgVersion(source_name='package2', version='1.0.0-1')),
+    AptPackage(name='package22', installed=AptPkgVersion(source_name='package2', version='1.0.0-1')),
+    AptPackage(name='package3', installed=AptPkgVersion(source_name='package31', version='1.0.0-1')),
 ]
 APT_UPGRADES = [
-    AptPackage(name='package1', is_installed=True, installed=AptPkgVersion(source_name='package1', version='1.0.0-1'),
+    AptPackage(name='package1', installed=AptPkgVersion(source_name='package1', version='1.0.0-1'),
                candidate=AptPkgVersion(source_name='package1', version='1.0.0-2')),
-    AptPackage(name='package3', is_installed=True, installed=AptPkgVersion(source_name='package31', version='1.0.0-1'),
+    AptPackage(name='package3', installed=AptPkgVersion(source_name='package31', version='1.0.0-1'),
                candidate=AptPkgVersion(source_name='package32', version='1.0.0-2')),
-    AptPackage(name='package9', is_installed=False, installed=None, candidate=AptPkgVersion(
-               source_name='package9', version='1.0.0-2')),
+    AptPackage(name='package9', is_installed=False,
+               candidate=AptPkgVersion(source_name='package9', version='1.0.0-2')),
 ]
 CLI_UPGRADES = [
     {'name': 'package1', 'version_from': '1.0.0-1', 'version_to': '1.0.0-2', 'source': 'package1'},
@@ -373,18 +384,14 @@ def test_parse_dpkg_hook_no_packages():
 @pytest.mark.parametrize('version', (2, 3))
 @pytest.mark.parametrize('apt_line', (
     # APT_HOOK_LINES start index, APT_HOOK_LINES end index, apt cache package
-    (0, 2, AptPackage(name='package-name', is_installed=False, installed=None,
+    (0, 2, AptPackage(name='package-name', is_installed=False,
                       candidate=AptPkgVersion(source_name='package-name', version='1.0.0-1'))),
-    (2, 4, AptPackage(name='package-name', is_installed=True,
-                      installed=AptPkgVersion(source_name='package-name', version='1.0.0-1'), candidate=None)),
-    (4, 6, AptPackage(name='package-name', is_installed=True,
-                      installed=AptPkgVersion(source_name='package-name', version='1.0.0-1'),
+    (2, 4, AptPackage(name='package-name', installed=AptPkgVersion(source_name='package-name', version='1.0.0-1'))),
+    (4, 6, AptPackage(name='package-name', installed=AptPkgVersion(source_name='package-name', version='1.0.0-1'),
                       candidate=AptPkgVersion(source_name='package-name', version='1.0.0-2'))),
-    (6, 8, AptPackage(name='package-name', is_installed=True,
-                      installed=AptPkgVersion(source_name='package-name', version='1.0.0-2'),
+    (6, 8, AptPackage(name='package-name', installed=AptPkgVersion(source_name='package-name', version='1.0.0-2'),
                       candidate=AptPkgVersion(source_name='package-name', version='1.0.0-1'))),
-    (8, 9, AptPackage(name='package-name', is_installed=True,
-                      installed=AptPkgVersion(source_name='package-name', version='1.0.0-1'), candidate=None)),
+    (8, 9, AptPackage(name='package-name', installed=AptPkgVersion(source_name='package-name', version='1.0.0-1'))),
 ))
 def test_parse_dpkg_hook(version, apt_line):
     """Calling parse_dpkg_hook() should parse the list of packages reported by a Dpkg::Pre-Install-Pkgs hook."""
@@ -644,7 +651,7 @@ def test_main_dpkg_hook(mocked_getfqdn, mocked_requests):
     input_lines = _get_dpkg_hook_preamble(3) + APT_HOOK_LINES[3][0:2]
     mocked_requests.register_uri('POST', DEBMONITOR_HOST_UPDATE_URL, status_code=201)
     mocked_apt.cache.Cache().__getitem__.return_value = AptPackage(
-        name='package-name', is_installed=False, installed=None,
+        name='package-name', is_installed=False,
         candidate=AptPkgVersion(source_name='package-name', version='1.0.0-1'))
 
     with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
