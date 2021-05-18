@@ -208,12 +208,15 @@ elif DEBMONITOR_CONFIG.get('LDAP', {}):
         setattr(sys.modules[__name__], key, value)
 
 # Content-Security-Policy
-CSP_DEFAULT_SRC = ("'self'", "'unsafe-inline'")  # TODO: remove unsafe-inline once more widely supported by browsers.
+# TODO: remove unsafe-inline when not needed anymore for inline script/style modifications by the libaries used
+CSP_DEFAULT_SRC = ("'self'", "'unsafe-inline'")
+# TODO: this can be activated for default-src only when unsafe-inline is removed from CSP_DEFAULT_SRC
+CSP_INCLUDE_NONCE_IN = ()
 CSP_IMG_SRC = ("'self'", 'data:')
 CSP_OBJECT_SRC = ("'none'",)
 CSP_FRAME_SRC = ("'none'",)
 CSP_FONT_SRC = ("'self'", 'data:')
 CSP_BASE_URI = ("'self'",)
 CSP_FRAME_ANCESTORS = ("'none'",)
-CSP_REQUIRE_SRI_FOR = ('script', 'style')
+CSP_UPGRADE_INSECURE_REQUESTS = True
 CSP_BLOCK_ALL_MIXED_CONTENT = True
