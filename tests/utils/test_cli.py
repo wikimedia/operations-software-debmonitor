@@ -5,15 +5,9 @@ import os
 import sys
 
 from collections import namedtuple
+from unittest import mock
 
 import pytest
-try:  # Python3
-    import unittest.mock as mock
-    BUILTINS = 'builtins'
-except ImportError:  # Python2
-    import mock
-    BUILTINS = '__builtin__'
-
 
 from tests import debmonitor as tests_deb
 from tests.conftest import HOSTNAME, IMAGENAME
@@ -202,10 +196,7 @@ def test_parse_args_version(capsys):
         cli.parse_args(['--version'])
     out, err = capsys.readouterr()
     msg = 'debmonitor-client {ver}'.format(ver=cli.__version__)
-    if sys.version_info.major == 2:
-        assert msg in err
-    else:
-        assert msg in out
+    assert msg in out
 
 
 def test_parse_args_config():
@@ -478,7 +469,7 @@ def test_self_update_has_update_ok(mocked_requests):
             cli.CLIENT_VERSION_HEADER: tests_deb.CLIENT_VERSION,
             cli.CLIENT_CHECKSUM_HEADER: tests_deb.CLIENT_CHECKSUM_DUMMY_1})
 
-    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(), create=True) as mocked_open:
+    with mock.patch('builtins.open', mock.mock_open(), create=True) as mocked_open:
         cli.self_update(DEBMONITOR_BASE_URL, None, True)
 
         mocked_open.assert_called_once_with(os.path.realpath(cli.__file__), mode='w')
@@ -490,7 +481,7 @@ def test_self_update_has_update_ok(mocked_requests):
 
 def test_get_distro_name():
     """Calling get_distro_name() should return the OS name."""
-    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
+    with mock.patch('builtins.open', mock.mock_open(read_data=OS_RELEASE),
                     create=True) as mocked_open:
         os = cli.get_distro_name()
         assert os == OS_NAME
@@ -499,7 +490,7 @@ def test_get_distro_name():
 
 def test_get_distro_name_empty():
     """Calling get_distro_name() with an empty file should return the 'unknown'."""
-    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(), create=True) as mocked_open:
+    with mock.patch('builtins.open', mock.mock_open(), create=True) as mocked_open:
         os = cli.get_distro_name()
         assert os == 'unknown'
         assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
@@ -507,7 +498,7 @@ def test_get_distro_name_empty():
 
 def test_get_distro_name_fail():
     """Calling get_distro_name() with an unreadable file, should return 'unknown'."""
-    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(), create=True) as mocked_open:
+    with mock.patch('builtins.open', mock.mock_open(), create=True) as mocked_open:
         mocked_open.side_effect = IOError
         os = cli.get_distro_name()
         assert os == 'unknown'
@@ -521,7 +512,7 @@ def test_main_host(params, mocked_getfqdn, mocked_requests):
     mocked_requests.register_uri('POST', DEBMONITOR_HOST_UPDATE_URL, status_code=201)
     _reset_apt_caches()
 
-    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
+    with mock.patch('builtins.open', mock.mock_open(read_data=OS_RELEASE),
                     create=True) as mocked_open:
         exit_code = cli.main(args)
         assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
@@ -538,7 +529,7 @@ def test_main_image(mocked_getfqdn, mocked_requests):
     mocked_requests.register_uri('POST', DEBMONITOR_IMAGE_UPDATE_URL, status_code=201)
     _reset_apt_caches()
 
-    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
+    with mock.patch('builtins.open', mock.mock_open(read_data=OS_RELEASE),
                     create=True) as mocked_open:
         exit_code = cli.main(args)
         assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
@@ -573,7 +564,7 @@ def test_main_no_packages(mocked_getfqdn, mocked_requests):
     mocked_requests.register_uri('POST', DEBMONITOR_HOST_UPDATE_URL, status_code=201)
     _reset_apt_caches(empty=True)
 
-    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
+    with mock.patch('builtins.open', mock.mock_open(read_data=OS_RELEASE),
                     create=True) as mocked_open:
         exit_code = cli.main(args)
         assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
@@ -589,7 +580,7 @@ def test_main_dry_run(mocked_getfqdn, capsys):
     args = cli.parse_args(['--config', DEBMONITOR_CLIENT_CONFIG_OK, '-n'])
     _reset_apt_caches()
 
-    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
+    with mock.patch('builtins.open', mock.mock_open(read_data=OS_RELEASE),
                     create=True) as mocked_open:
         exit_code = cli.main(args)
         assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
@@ -617,7 +608,7 @@ def test_main_dry_run_image_name(capsys):
     args = cli.parse_args(['--config', DEBMONITOR_CLIENT_CONFIG_OK, '-n', '-i', IMAGENAME])
     _reset_apt_caches()
 
-    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
+    with mock.patch('builtins.open', mock.mock_open(read_data=OS_RELEASE),
                     create=True) as mocked_open:
         exit_code = cli.main(args)
         assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
@@ -654,7 +645,7 @@ def test_main_dpkg_hook(mocked_getfqdn, mocked_requests):
         name='package-name', is_installed=False,
         candidate=AptPkgVersion(source_name='package-name', version='1.0.0-1'))
 
-    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
+    with mock.patch('builtins.open', mock.mock_open(read_data=OS_RELEASE),
                     create=True) as mocked_open:
         exit_code = cli.main(args, input_lines=input_lines)
         assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
@@ -672,7 +663,7 @@ def test_main_update_fail(mocked_getfqdn, mocked_requests, caplog):
     mocked_requests.register_uri('HEAD', DEBMONITOR_CLIENT_URL, status_code=500)
     _reset_apt_caches()
 
-    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
+    with mock.patch('builtins.open', mock.mock_open(read_data=OS_RELEASE),
                     create=True) as mocked_open:
         exit_code = cli.main(args)
         assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
@@ -696,7 +687,7 @@ def test_main_update_ok(mocked_getfqdn, mocked_requests, caplog):
             cli.CLIENT_CHECKSUM_HEADER: tests_deb.CLIENT_CHECKSUM_DUMMY_1})
     _reset_apt_caches()
 
-    with mock.patch('{mod}.open'.format(mod=BUILTINS), mock.mock_open(read_data=OS_RELEASE),
+    with mock.patch('builtins.open', mock.mock_open(read_data=OS_RELEASE),
                     create=True) as mocked_open:
         exit_code = cli.main(args)
         assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
