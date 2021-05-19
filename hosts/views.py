@@ -162,7 +162,7 @@ def update(request, name):
         logger.exception(message)
         return http.HttpResponseBadRequest('{message}: {e}'.format(message=message, e=e), content_type=TEXT_PLAIN)
     except Exception as e:  # Force a response to avoid using the HTML template for all other 500s
-        logger.exception(message)
+        logger.error(message, exc_info=True)
         return http.HttpResponseServerError('{message}: {e}'.format(message=message, e=e), content_type=TEXT_PLAIN)
     else:
         return http.HttpResponse(status=201, content_type=TEXT_PLAIN)

@@ -23,7 +23,7 @@ DebMonitor CLI - Debian packages tracker CLI.
 Automatically collect the current status of all installed and upgradable packages and report it to a DebMonitor server.
 It can report all installed and upgradable packages, just the upgradable ones, or the changes reported by a Dpkg hook.
 
-This script was tested with Python 3.4, 3.5, 3.6, 3.7, 3.8 & 3.9
+This script was tested with Python 3.5, 3.6, 3.7, 3.8 & 3.9
 
 * Install the following Debian packages dependencies
 
@@ -68,11 +68,7 @@ import sys
 
 from collections import namedtuple
 from configparser import ConfigParser, Error as ConfigParserError
-
-try:
-    from json.decoder import JSONDecodeError
-except ImportError:  # pragma: py3 no cover - Backward compatibility with Python 3.4
-    JSONDecodeError = ValueError
+from json.decoder import JSONDecodeError
 
 import apt
 import requests
@@ -81,7 +77,7 @@ from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
 # The client version is based on the server's major.minor version plus a dedicated client-specific incremental number.
-__version__ = '0.2client4'
+__version__ = '0.3client1'
 
 SUPPORTED_API_VERSIONS = ('v1',)
 CLIENT_VERSION_HEADER = 'X-Debmonitor-Client-Version'
@@ -264,7 +260,8 @@ def parse_apt_line(update_line, cache, version=3):
     cache_item = cache[line.name]
     if line.direction == '<':  # Upgrade
         group = 'installed'
-        package = {'name': line.name, 'version': line.version_to, 'source': cache_item.candidate.source_name}
+        package = {'name': line.name, 'version': line.version_to,
+                   'source': cache_item.versions[line.version_to].source_name}
 
         if line.version_from == '-':
             action = 'installed'
@@ -279,7 +276,8 @@ def parse_apt_line(update_line, cache, version=3):
             logger.debug('Collected removed package: %s', package)
         else:  # Downgrade
             group = 'installed'
-            package = {'name': line.name, 'version': line.version_to, 'source': cache_item.candidate.source_name}
+            package = {'name': line.name, 'version': line.version_to,
+                       'source': cache_item.versions[line.version_to].source_name}
             logger.debug('Collected downgraded package: %s', package)
 
     else:  # No change (=)
