@@ -625,9 +625,10 @@ def test_main_wrong_http_code(params, mocked_getfqdn, mocked_requests, caplog):
     mocked_requests.register_uri('POST', DEBMONITOR_HOST_UPDATE_URL, status_code=400)
     _reset_apt_caches()
 
-    # Explicitely avoiding mocking open() due to a bug in Python 3.4.2 (jessie default version) that make it fail.
-    cli.OS_RELEASE_FILE = OS_RELEASE_FILE
-    exit_code = cli.main(args)
+    with mock.patch('builtins.open', mock.mock_open(read_data=OS_RELEASE),
+                    create=True) as mocked_open:
+        exit_code = cli.main(args)
+        assert mock.call(cli.OS_RELEASE_FILE, mode='r') in mocked_open.mock_calls
 
     mocked_getfqdn.assert_called_once_with()
     assert mocked_requests.called

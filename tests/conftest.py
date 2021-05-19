@@ -1,12 +1,8 @@
-import sys
-
 import pytest
 import requests_mock
 import unittest.mock as mock
 
-
-if sys.version_info.major >= 3 and sys.version_info.minor >= 5:  # Would fail for CLI tests in Python 3.4
-    from django.core.management import call_command
+from django.core.management import call_command
 
 
 HOSTNAME = 'host1.example.com'
@@ -15,8 +11,6 @@ IMAGENAME = '{base}1.2.3-1'.format(base=IMAGEBASENAME)
 STRONGHOLD_MIDDLEWARE = 'stronghold.middleware.LoginRequiredMiddleware'
 
 
-@pytest.mark.skipif(sys.version_info.major < 3 or sys.version_info.major == 3 and sys.version_info.minor < 5,
-                    reason='Requires Python3.5 or greater')
 @pytest.fixture(scope='module')
 def django_db_setup(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():

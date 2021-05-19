@@ -23,7 +23,7 @@ DebMonitor CLI - Debian packages tracker CLI.
 Automatically collect the current status of all installed and upgradable packages and report it to a DebMonitor server.
 It can report all installed and upgradable packages, just the upgradable ones, or the changes reported by a Dpkg hook.
 
-This script was tested with Python 3.4, 3.5, 3.6, 3.7, 3.8 & 3.9
+This script was tested with Python 3.5, 3.6, 3.7, 3.8 & 3.9
 
 * Install the following Debian packages dependencies
 
@@ -68,11 +68,7 @@ import sys
 
 from collections import namedtuple
 from configparser import ConfigParser, Error as ConfigParserError
-
-try:
-    from json.decoder import JSONDecodeError
-except ImportError:  # pragma: py3 no cover - Backward compatibility with Python 3.4
-    JSONDecodeError = ValueError
+from json.decoder import JSONDecodeError
 
 import apt
 import requests
