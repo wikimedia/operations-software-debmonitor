@@ -13,26 +13,27 @@ case "$1" in
     #
     # As such, continue to use adduser on Buster for now (the fix in glibc might
     # still get backported to a point release)
-    RELEASE="`lsb_release -rs`"
-    if [ "$RELEASE" == "10" ]; then
-	if ! getent passwd debmonitor > /dev/null; then
-	    adduser --quiet --system --no-create-home --home /nonexistent \
-		    --group --gecos "DebMonitor system user" debmonitor || true
-	fi
+    source /etc/os-release
+
+    if [ "${VERSION_ID}" == "10" ]; then
+      if ! getent passwd debmonitor > /dev/null; then
+          adduser --quiet --system --no-create-home --home /nonexistent \
+              --group --gecos "DebMonitor system user" debmonitor || true
+      fi
     else
-	# docker images don't have systemd-sysusers as such just ignore errors
-	if command -v systemd-sysusers &> /dev/null
-	then
-	    systemd-sysusers
-	fi
+      # docker images don't have systemd-sysusers as such just ignore errors
+      if command -v systemd-sysusers &> /dev/null
+      then
+        systemd-sysusers
+      fi
     fi
 
     # If the DebMonitor has been prepopulated (e.g. when using a configuration
     # management system), ingest all packages
     if [[ -e /etc/debmonitor.conf ]]; then
-        if grep -Eq '^server=.+' /etc/debmonitor.conf ; then
-            /usr/bin/debmonitor-client-unpriv || true
-        fi
+      if grep -Eq '^server=.+' /etc/debmonitor.conf ; then
+          /usr/bin/debmonitor-client-unpriv || true
+      fi
     fi
 
   ;;
