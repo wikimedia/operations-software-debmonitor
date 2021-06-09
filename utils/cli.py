@@ -294,13 +294,17 @@ def get_http_adapter():
     http codes to the retry list:
         * 429, 500, 502, 503, 504
     """
+    # The method_whitelist parameter has been deprecated since v1.26.0 and will be removed in v2.0.
+    # It has been renamed to allowed_methods in v1.26.0. Keep backward compatibility.
+    methods_param_name = 'allowed_methods' if hasattr(Retry.DEFAULT, 'allowed_methods') else 'method_whitelist'
+    retry_params = {
+        'total': 3,
+        'backoff_factor': 60,
+        'status_forcelist': [429, 500, 502, 503, 504],
+        methods_param_name: ['HEAD', 'GET', 'PUT', 'DELETE', 'OPTIONS', 'TRACE', 'POST'],
+    }
 
-    retry_strategy = Retry(
-        total=3,
-        backoff_factor=60,
-        status_forcelist=[429, 500, 502, 503, 504],
-        method_whitelist=['HEAD', 'GET', 'PUT', 'DELETE', 'OPTIONS', 'TRACE', 'POST'],
-    )
+    retry_strategy = Retry(**retry_params)
     adapter = HTTPAdapter(max_retries=retry_strategy)
     http = requests.Session()
     http.headers.update({
