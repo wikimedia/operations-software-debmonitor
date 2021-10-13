@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # ----------------------------------------------------------------------------
 # DebMonitor CLI - Debian packages tracker CLI
-# Copyright (C) 2017-2018  Riccardo Coccioli <rcoccioli@wikimedia.org>
+# Copyright (C) 2017-2021  Riccardo Coccioli <rcoccioli@wikimedia.org>
 #                          Wikimedia Foundation, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -77,13 +77,13 @@ from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
 # The client version is based on the server's major.minor version plus a dedicated client-specific incremental number.
-__version__ = '0.3client1'
+__version__ = '0.3client2'
 
 SUPPORTED_API_VERSIONS = ('v1',)
 CLIENT_VERSION_HEADER = 'X-Debmonitor-Client-Version'
 CLIENT_CHECKSUM_HEADER = 'X-Debmonitor-Client-Checksum'
 OS_RELEASE_FILE = '/etc/os-release'
-REQUEST_TIMEOUT = 3
+REQUEST_TIMEOUT = (3.05, 30)  # (connect, read) see https://docs.python-requests.org/en/master/user/advanced/#timeouts
 logger = logging.getLogger('debmonitor')
 AptLineV2 = namedtuple('LineV2', ['name', 'version_from', 'direction', 'version_to', 'action'])
 AptLineV3 = namedtuple('LineV3', ['name', 'version_from', 'arch_from', 'multiarch_from', 'direction', 'version_to',
