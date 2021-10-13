@@ -248,7 +248,7 @@ def _process_installed(host, os, host_packages, existing_not_updated, item):
         existing.upgrade_type = None
         existing.save()
     else:
-        host_packages[package_version.package.name] = HostPackage.objects.create(
+        host_packages[package_version.package.name], _ = HostPackage.objects.get_or_create(
             host=host, package=package_version.package, package_version=package_version)
 
 
