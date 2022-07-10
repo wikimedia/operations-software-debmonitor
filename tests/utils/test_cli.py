@@ -409,7 +409,7 @@ def test_self_update_head_fail(mocked_requests):
     """Calling self_update() when the HEAD request to DebMonitor fail should raise RuntimeError."""
     mocked_requests.register_uri('HEAD', DEBMONITOR_CLIENT_URL, status_code=500)
     with pytest.raises(RuntimeError, match='Unable to check remote script version'):
-        cli.self_update(DEBMONITOR_BASE_URL, None, True)
+        cli.self_update(DEBMONITOR_BASE_URL, None, True, cli.get_http_adapter(1, 1))
 
     assert mocked_requests.called
 
@@ -418,7 +418,7 @@ def test_self_update_head_no_header(mocked_requests):
     """Calling self_update() when the HEAD request is missing the expected header should raise RuntimeError."""
     mocked_requests.register_uri('HEAD', DEBMONITOR_CLIENT_URL, status_code=200)
     with pytest.raises(RuntimeError, match='No header {header} value found'.format(header=cli.CLIENT_VERSION_HEADER)):
-        cli.self_update(DEBMONITOR_BASE_URL, None, True)
+        cli.self_update(DEBMONITOR_BASE_URL, None, True, cli.get_http_adapter(1, 1))
 
     assert mocked_requests.called
 
@@ -428,7 +428,7 @@ def test_self_update_head_same_version(mocked_requests):
     mocked_requests.register_uri(
         'HEAD', DEBMONITOR_CLIENT_URL, status_code=200, headers={cli.CLIENT_VERSION_HEADER: cli.__version__})
 
-    ret = cli.self_update(DEBMONITOR_BASE_URL, None, True)
+    ret = cli.self_update(DEBMONITOR_BASE_URL, None, True, cli.get_http_adapter(1, 1))
 
     assert ret is None
     assert mocked_requests.called
@@ -441,7 +441,7 @@ def test_self_update_has_update_fail(mocked_requests):
     mocked_requests.register_uri('GET', DEBMONITOR_CLIENT_URL, status_code=500)
 
     with pytest.raises(RuntimeError, match='Unable to download remote script'):
-        cli.self_update(DEBMONITOR_BASE_URL, None, True)
+        cli.self_update(DEBMONITOR_BASE_URL, None, True, cli.get_http_adapter(1, 1))
 
     assert mocked_requests.called
 
@@ -455,7 +455,7 @@ def test_self_update_has_update_wrong_hash(mocked_requests):
                                           cli.CLIENT_CHECKSUM_HEADER: 'invalid'})
 
     with pytest.raises(RuntimeError, match='The checksum of the script do not match the HTTP header'):
-        cli.self_update(DEBMONITOR_BASE_URL, None, True)
+        cli.self_update(DEBMONITOR_BASE_URL, None, True, cli.get_http_adapter(1, 1))
 
     assert mocked_requests.called
 
@@ -470,7 +470,7 @@ def test_self_update_has_update_ok(mocked_requests):
             cli.CLIENT_CHECKSUM_HEADER: tests_deb.CLIENT_CHECKSUM_DUMMY_1})
 
     with mock.patch('builtins.open', mock.mock_open(), create=True) as mocked_open:
-        cli.self_update(DEBMONITOR_BASE_URL, None, True)
+        cli.self_update(DEBMONITOR_BASE_URL, None, True, cli.get_http_adapter(1, 1))
 
         mocked_open.assert_called_once_with(os.path.realpath(cli.__file__), mode='w')
         mocked_handler = mocked_open()

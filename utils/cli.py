@@ -287,7 +287,7 @@ def parse_apt_line(update_line, cache, version=3):
     return group, package
 
 
-def get_http_adapter():
+def get_http_adapter(tries: int, backoff: int):
     """create and return a http adapter with a more fine grained retry strategy
 
     This adds POST to the listy of methods to retry as well as  the following
@@ -298,8 +298,8 @@ def get_http_adapter():
     # It has been renamed to allowed_methods in v1.26.0. Keep backward compatibility.
     methods_param_name = 'allowed_methods' if hasattr(Retry.DEFAULT, 'allowed_methods') else 'method_whitelist'
     retry_params = {
-        'total': 3,
-        'backoff_factor': 60,
+        'total': tries,
+        'backoff_factor': backoff,
         'status_forcelist': [429, 500, 502, 503, 504],
         methods_param_name: ['HEAD', 'GET', 'PUT', 'DELETE', 'OPTIONS', 'TRACE', 'POST'],
     }
@@ -315,7 +315,7 @@ def get_http_adapter():
     return http
 
 
-def self_update(base_url, cert, verify):
+def self_update(base_url, cert, verify, http):
     """Check if the DebMonitor server has a different version of this script and automatically self-overwrite it.
 
     Arguments:
@@ -323,6 +323,7 @@ def self_update(base_url, cert, verify):
         cert (str, tuple, None): a client certificate as required by the requests library.
         verify (bool, str): to be passed to requests calls for server side certificate validation. Either a boolean or
             a string with the path to a CA bundle.
+        http (request.Session): A requests session object used to make http requests
 
     Raises:
         requests.exceptions.RequestException: on error to check the version and get the new script.
@@ -330,7 +331,6 @@ def self_update(base_url, cert, verify):
         RuntimeError: if no remote version is found or there is a checksum mismatch or a wrong HTTP status code.
     """
     client_url = '{base_url}/client'.format(base_url=base_url)
-    http = get_http_adapter()
     response = http.head(client_url, cert=cert, verify=verify, timeout=REQUEST_TIMEOUT)
     if response.status_code != requests.status_codes.codes.ok:
         raise RuntimeError('Unable to check remote script version, got HTTP {retcode}, expected 200 OK.'.format(
@@ -451,6 +451,8 @@ def parse_args(argv):
     parser.add_argument('--update', action='store_true',
                         help=('Self-update DebMonitor CLI script if there is a new version available on the '
                               'DebMonitor server. The script will execute with the current version.'))
+    parser.add_argument('--retries', type=int, default=3, help="number of retries to use for network requests")
+    parser.add_argument('--retry-backoff', type=int, default=60, help="number of seconds to wait between retries")
     parser.add_argument('-d', '--debug', action="store_true", help='Set logging level to DEBUG')
     parser.add_argument('--version', action='version', version='%(prog)s {version}'.format(version=__version__))
     # Initialize the default values with those from the configuration file.
@@ -560,7 +562,7 @@ def run(args, input_lines=None):
     elif args.cert is not None:
         cert = args.cert
 
-    http = get_http_adapter()
+    http = get_http_adapter(args.retries, args.retry_backoff)
     response = http.post(url, cert=cert, json=payload, verify=args.verify, timeout=REQUEST_TIMEOUT)
     if response.status_code != requests.status_codes.codes.created:
         raise RuntimeError('Failed to send the update to the DebMonitor server: {status} {body}'.format(
@@ -569,7 +571,7 @@ def run(args, input_lines=None):
 
     if args.update:
         try:
-            self_update(base_url, cert, args.verify)
+            self_update(base_url, cert, args.verify, http)
         except Exception as e:
             logger.error('Unable to self-update this script: %s', e)
 
