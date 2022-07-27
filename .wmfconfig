@@ -1,0 +1,10 @@
+[release]
+skip_changelog = true
+
+[github]
+repository = debmonitor
+
+[debian]
+distros = stretch,buster,bullseye
+source_package = debmonitor
+binary_package = debmonitor-client
