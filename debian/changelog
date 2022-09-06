@@ -1,3 +1,9 @@
+debmonitor (0.3.2-1) unstable; urgency=medium
+
+  * v0.3.2 upstream release.
+
+ -- jbond <jbond@wikimedia.org>  Tue, 06 Sep 2022 13:09:20 -0000
+
 debmonitor (0.3.1-1) unstable; urgency=medium
 
   * v0.3.1 upstream release.
