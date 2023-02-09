@@ -5,6 +5,7 @@ from django.db.models import Count
 from django.utils import timezone
 
 from bin_packages.models import Package, PackageVersion
+from hosts.models import Host
 from kernels.models import KernelVersion
 from images.models import Image
 from src_packages.models import SrcPackage, SrcPackageVersion
@@ -18,6 +19,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Run the garbage collection."""
+        # TODO: make the number of days after which deleting Image and Host objects tunable via the configuration
+        #       with 0 meaning that no object of that type should be deleted.
+
         # GC old images until they will be deleted when deprecated externally from Debmonitor
         res = Image.objects.select_related(None).filter(modified__lt=timezone.now() - timedelta(days=90)).delete()
         # Getting the specific counter of Images deleted because the Django reported total number of deleted objects
@@ -28,6 +32,14 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             'Deleted {count} Image objects not updated in the last 90 days'.format(
                 count=res[1].get('images.Image', 0))))
+
+        # GC old Hosts that are not reporting anymore to Debmonitor. Usually they are deleted when decommissioned but
+        # it might happen that the deletion fails and a stale host is left around.
+        # As above report only the number of hosts deleted.
+        res = Host.objects.select_related(None).filter(modified__lt=timezone.now() - timedelta(days=15)).delete()
+        self.stdout.write(self.style.SUCCESS(
+            'Deleted {count} Host objects not updated in the last 15 days'.format(
+                count=res[1].get('hosts.Host', 0))))
 
         # Searching the packages to delete in Python as doing it in a single query makes it explode in terms of explain
         sets = []
