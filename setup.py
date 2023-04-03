@@ -8,7 +8,7 @@ with open('README.rst', 'r') as readme:
 
 # Required dependencies
 install_requires = [
-    'Django>=2.2,<2.3.0a0',
+    'Django>=2.2,<4.0',
     'django-stronghold',
     'django-csp',
 ]
@@ -46,7 +46,7 @@ setup(
         'Development Status :: 4 - Beta',
         'Environment :: Web Environment',
         'Framework :: Django',
-        'Framework :: Django :: 2.2',
+        'Framework :: Django :: 3.2',
         'Intended Audience :: System Administrators',
         'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
         'Natural Language :: English',

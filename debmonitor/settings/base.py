@@ -114,6 +114,8 @@ else:
         },
     }
 
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
 # Password validation
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -138,6 +140,7 @@ USE_I18N = False
 USE_L10N = False
 USE_TZ = True
 TIME_ZONE = DEBMONITOR_CONFIG.get('TIME_ZONE', 'UTC')
+
 
 # Static files (CSS, JavaScript, Images)
 

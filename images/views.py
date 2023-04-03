@@ -91,7 +91,7 @@ class DetailView(View):
 
     def get(self, request, name):
         """Image detail page."""
-        image = get_object_or_404(Image.objects.filter(name=name))
+        image = get_object_or_404(Image, name=name)
 
         image_packages = ImagePackage.objects.filter(image=image).annotate(
             has_upgrade=Case(
@@ -124,7 +124,7 @@ class DetailView(View):
         return render(request, 'images/detail.html', args)
 
     def delete(self, request, name):
-        image = get_object_or_404(Image.objects.filter(name=name))
+        image = get_object_or_404(Image, name=name)
         image.delete()
 
         return http.HttpResponse(status=204, content_type=TEXT_PLAIN)

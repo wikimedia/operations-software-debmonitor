@@ -91,7 +91,7 @@ class DetailView(View):
 
     def get(self, request, name):
         """Host detail page."""
-        host = get_object_or_404(Host.objects.filter(name=name))
+        host = get_object_or_404(Host, name=name)
 
         host_packages = HostPackage.objects.filter(host=host).annotate(
             has_upgrade=Case(
@@ -124,7 +124,7 @@ class DetailView(View):
         return render(request, 'hosts/detail.html', args)
 
     def delete(self, request, name):
-        host = get_object_or_404(Host.objects.filter(name=name))
+        host = get_object_or_404(Host, name=name)
         host.delete()
 
         return http.HttpResponse(status=204, content_type=TEXT_PLAIN)
