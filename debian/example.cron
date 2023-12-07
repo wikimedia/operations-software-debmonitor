@@ -1,4 +1,0 @@
-#!/bin/sh
-# Cron.daily script for debmonitor, should be run with the debmonitor system user
-
-/usr/bin/debmonitor-client-unpriv

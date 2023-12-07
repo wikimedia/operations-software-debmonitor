@@ -1,0 +1,8 @@
+{
+    "ALLOWED_HOSTS": ["localhost"],
+    "SECRET_KEY": "SECRET",
+    "STATIC_ROOT": "/usr/share/debmonitor/static/",
+    "SQLITE": {
+        "FILE": "/tmp/debmonitor.sqlite3"
+    }
+}

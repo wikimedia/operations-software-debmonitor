@@ -1,0 +1,14 @@
+[Unit]
+Description=Debmonitor
+After=network.target
+
+[Service]
+ExecStart = /usr/bin/uwsgi --die-on-term --ini /etc/uwsgi/apps-enabled/debmonitor.ini
+ExecReload = /bin/kill -HUP $MAINPID
+User = www-data
+Group = www-data
+SyslogIdentifier = "debmonitor"
+LimitCORE=0
+
+[Install]
+WantedBy=multi-user.target

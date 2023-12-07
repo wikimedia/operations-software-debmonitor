@@ -1,0 +1,7 @@
+#!/bin/sh
+# postinst script for debmonitor
+
+set -e
+
+/usr/bin/debmonitor collectstatic --no-input
+/usr/bin/debmonitor migrate --no-input

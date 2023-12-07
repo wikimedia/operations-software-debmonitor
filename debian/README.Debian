@@ -1,0 +1,43 @@
+Debmonitor setup
+================
+
+1. Database configuration
+-------------------------
+By default Debmonitor is configured to use an SQLite database, stored in /tmp,
+this makes the database non-persistant across reboots.
+
+Please change the database location in /etc/debmonitor/config.json, or define a
+new connection, to either a SQLite, Postgresql or MariaDB database. See the
+Django documentation for instructions on database configuration. 
+https://docs.djangoproject.com/en/3.2/ref/databases 
+
+After reconfiguring the database connection you will need to re-run the database
+migrations. This is done by running:
+
+    /usr/bin/debmonitor migrate
+
+
+2. Security
+-----------
+Being based on Django Debmonitor requires the same security considerations as
+any other Django application. Specifically you will need to change at least the
+settings "ALLOWED_HOSTS" and "SECRET_KEY", both found in /etc/debmonitor/config.json.
+
+For values for ALLOWED_HOSTS please consult the Django manual chapter regarding
+settings: https://docs.djangoproject.com/en/3.2/ref/settings/#allowed-hosts
+
+The SECRET_KEY variable should be set to a random string of characters. One option
+for generating a random string is openssl, to generate a 48 character string run:
+
+    $ openssl rand -base64 48
+
+Remember to add " around you secret key as you update the configuration. Keep this
+value a secret and backed up, as Django rely on it for cryptographic signing. See:
+https://docs.djangoproject.com/en/3.2/ref/settings/#std-setting-SECRET_KEY
+
+
+3. Webserver configuration
+--------------------------
+The Debmonitor package will install and start a uWSGI process running the
+Debmonitor application. Please consult the manual for you webserver of choice
+for instructions on how to relay / proxy traffic to uWSGI.

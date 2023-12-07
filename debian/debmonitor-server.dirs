@@ -1,0 +1,3 @@
+/etc/debmonitor/
+/etc/uwsgi/apps-enabled
+/usr/share/debmonitor/
