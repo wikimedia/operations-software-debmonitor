@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Package configuration."""
-from setuptools import find_packages, setup
+from setuptools import find_namespace_packages, setup
 
 
 with open('README.rst', 'r') as readme:
@@ -8,7 +8,7 @@ with open('README.rst', 'r') as readme:
 
 # Required dependencies
 install_requires = [
-    'Django>=2.2,<4.0',
+    'Django>=3.2,<4',
     'django-stronghold',
     'django-csp',
 ]
@@ -29,16 +29,15 @@ extras_require = {
         'pytest>=3.5.0',
         'pytest-cov>=2.5.1',
         'pytest-django>=3.1.2',
+        'pytest-runner>=4.2',
         'requests-mock>=1.3.0',
     ],
 }
 extras_require['with-all'] = extras_require['with-mysql'] + extras_require['with-ldap'] + extras_require['with-cas']
 
 setup_requires = [
-    'pytest-runner>=4.2',
     'setuptools_scm>=1.17.0',
 ]
-
 setup(
     author='Riccardo Coccioli',
     author_email='rcoccioli@wikimedia.org',
@@ -52,11 +51,11 @@ setup(
         'Natural Language :: English',
         'Operating System :: MacOS :: MacOS X',
         'Operating System :: POSIX :: Linux',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3 :: Only',
         'Topic :: Internet :: WWW/HTTP :: WSGI :: Application',
         'Topic :: System :: Software Distribution',
@@ -69,7 +68,8 @@ setup(
     license='GPLv3+',
     long_description=long_description,
     name='debmonitor',
-    packages=find_packages(exclude=['*.tests', '*.tests.*', 'tests.*']),
+    packages=find_namespace_packages(exclude=["tests.*", "tests", "doc.*", "doc"]),
+    include_package_data=True,
     platforms=['GNU/Linux', 'MacOSX'],
     setup_requires=setup_requires,
     url='https://github.com/wikimedia/debmonitor',

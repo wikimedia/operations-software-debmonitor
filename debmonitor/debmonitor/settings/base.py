@@ -106,6 +106,13 @@ if DEBMONITOR_CONFIG.get('MYSQL', {}):
             'OPTIONS': DEBMONITOR_CONFIG['MYSQL']['OPTIONS'],
         },
     }
+elif DEBMONITOR_CONFIG.get('SQLITE', {}):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': DEBMONITOR_CONFIG['SQLITE']['FILE'],
+        },
+    }
 else:
     DATABASES = {
         'default': {
