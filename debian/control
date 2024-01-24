@@ -10,6 +10,7 @@ Package: debmonitor-server
 Architecture: all
 Depends:
     python3-debmonitor,
+    uwsgi-plugin-python3,
     ${python3:Depends},
     ${misc:Depends},
 Description: DebMonitor tracks Debian packages across a fleet of hosts
@@ -18,7 +19,7 @@ Description: DebMonitor tracks Debian packages across a fleet of hosts
  when distributed in the target hosts, allows to automatically update DebMonitor's database using APT and DPKG hooks.
 
 
-Package:python3-debmonitor 
+Package:python3-debmonitor
 Architecture: all
 Depends:
  ${python3:Depends},

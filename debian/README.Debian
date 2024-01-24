@@ -17,6 +17,20 @@ migrations. This is done by running:
     /usr/bin/debmonitor migrate
 
 
+1.1 Database migrations
+-----------------------
+Subsequent upgrades to Debmonitor may come with database schema migrations.
+After each upgrade please backup your existing database before inspecting and
+applying any pending migrations using the migration command. Migrations can be
+inspected using:
+
+    /usr/bin/debmonitor migrate --plan
+
+Then apply schema changes by running:
+
+    /usr/bin/debmonitor migrate
+
+
 2. Security
 -----------
 Being based on Django Debmonitor requires the same security considerations as

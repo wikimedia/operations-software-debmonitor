@@ -3,5 +3,5 @@
 
 set -e
 
+# Collect JavaScript, stylesheets and images
 /usr/bin/debmonitor collectstatic --no-input
-/usr/bin/debmonitor migrate --no-input
