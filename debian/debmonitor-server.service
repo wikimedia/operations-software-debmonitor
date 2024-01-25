@@ -1,6 +1,7 @@
 [Unit]
 Description=Debmonitor
 After=network.target
+ConditionPathExists = /etc/uwsgi/apps-enabled/debmonitor.ini
 
 [Service]
 ExecStart = /usr/bin/uwsgi --die-on-term --ini /etc/uwsgi/apps-enabled/debmonitor.ini
