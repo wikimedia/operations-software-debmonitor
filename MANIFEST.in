@@ -1,0 +1,2 @@
+include debmonitor/static/**/*
+recursive-include debmonitor/templates/ *.html
