@@ -3,7 +3,15 @@ Section: admin
 Priority: optional
 Maintainer: Riccardo Coccioli <rcoccioli@wikimedia.org>
 Uploaders: Moritz Muehlenhoff <moritz@wikimedia.org>
-Build-Depends: debhelper-compat (=13), dh-exec, dh-python, python3-all, python3-pytest-cov, python3-requests-mock, tox
+Build-Depends:
+    debhelper-compat (=13),
+    dh-exec,
+    dh-python,
+    python3-all,
+    python3-pytest-cov,
+    python3-requests-mock,
+    python3-setuptools-scm,
+    tox
 Standards-Version: 4.1.1
 
 Package: debmonitor-server
