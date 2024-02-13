@@ -2,3 +2,4 @@
 /etc/uwsgi/apps-enabled
 /usr/share/debmonitor/
 /usr/lib/python3/dist-packages/debmonitor/utils/
+/var/log/debmonitor/

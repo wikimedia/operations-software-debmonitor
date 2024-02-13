@@ -1,4 +1,3 @@
 #!/usr/bin/dh-exec
 debian/debmonitor.ini /etc/uwsgi/apps-available
 debian/debmonitor.sh => /usr/bin/debmonitor
-debian/example.config.json => /etc/debmonitor/config.json
