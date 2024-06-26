@@ -19,7 +19,7 @@ MISSING_HOST_URL = INDEX_URL + 'non_existing_host.example.com'
 PAYLOAD_NEW_OK = """{
     "api_version": "v1",
     "update_type": "full",
-    "os": "os1",
+    "os": "Debian 13",
     "hostname": "%(uuid)s",
     "running_kernel": {
         "version": "%(uuid)s",
@@ -41,7 +41,7 @@ PAYLOAD_NEW_OK = """{
 PAYLOAD_EXISTING_NO_UPDATE = """{
     "api_version": "v1",
     "update_type": "full",
-    "os": "os1",
+    "os": "Debian 11",
     "hostname": "host1.example.com",
     "running_kernel": {
         "version": "100",
@@ -55,7 +55,7 @@ PAYLOAD_EXISTING_NO_UPDATE = """{
 PAYLOAD_EXISTING_UPDATE = """{
     "api_version": "v1",
     "update_type": "full",
-    "os": "os1",
+    "os": "Debian 11",
     "hostname": "host1.example.com",
     "running_kernel": {
         "version": "100",
@@ -76,13 +76,13 @@ PAYLOAD_EXISTING_UPDATE = """{
     ]
 }"""
 PAYLOAD_NEW_KO = """{
-    "os": "os1",
+    "os": "Debian 11",
     "hostname": "%(uuid)s"
 }"""
 PAYLOAD_UPGRADABLE = """{
     "api_version": "v1",
     "update_type": "upgradable",
-    "os": "os1",
+    "os": "Debian 11",
     "hostname": "host1.example.com",
     "running_kernel": {
         "version": "100",

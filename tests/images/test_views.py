@@ -19,7 +19,7 @@ MISSING_IMAGE_URL = INDEX_URL + 'non_existing_image_example'
 PAYLOAD_NEW_OK = """{
     "api_version": "v1",
     "update_type": "full",
-    "os": "os1",
+    "os": "Debian 13",
     "image_name": "%(imagebasename)s%(uuid)s",
     "installed": [
         {"name": "pkg1-%(uuid)s", "version": "1.0.0-1", "source": "pkg1-%(uuid)s"},
@@ -30,7 +30,7 @@ PAYLOAD_NEW_OK = """{
 PAYLOAD_EXISTING_NO_UPDATE = """{
     "api_version": "v1",
     "update_type": "full",
-    "os": "os1",
+    "os": "Debian 11",
     "image_name": "%(imagename)s",
     "installed": [
         {"name": "package1", "version": "1.0.0-1", "source": "package1"},
@@ -40,7 +40,7 @@ PAYLOAD_EXISTING_NO_UPDATE = """{
 PAYLOAD_EXISTING_UPDATE = """{
     "api_version": "v1",
     "update_type": "full",
-    "os": "os1",
+    "os": "Debian 11",
     "image_name": "%(imagename)s",
     "installed": [
         {"name": "package1", "version": "1.0.0-1", "source": "package1"},
@@ -49,13 +49,13 @@ PAYLOAD_EXISTING_UPDATE = """{
     ]
 }"""
 PAYLOAD_NEW_BROKEN = """{
-    "os": "os1",
+    "os": "Debian 11",
     "image_name": "%(imagebasename)s%(uuid)s"
 }"""
 PAYLOAD_UPGRADABLE = """{
     "api_version": "v1",
     "update_type": "upgradable",
-    "os": "os1",
+    "os": "Debian 11",
     "image_name": "%(imagename)s",
     "upgradable": [
         {"name": "package1", "version_from": "1.0.0-1", "version_to": "1.0.0-2", "source": "package1", "type": ""},
@@ -175,7 +175,7 @@ def test_update_status_code_wrong_imagename(client, settings, require_login, ver
     if authenticated."""
     setup_auth_settings(settings, require_login, verify_clients)
     response = client.generic('POST', EXISTING_IMAGE_UPDATE_URL,
-                              '{"image_name": "non_existing_image_example", "os": "os1"}')
+                              '{"image_name": "non_existing_image_example", "os": "Debian 11"}')
     validate_status_code(response, require_login, verify_clients=verify_clients, default=400)
 
 

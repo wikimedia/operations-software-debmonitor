@@ -42,7 +42,7 @@ def test_disable_check_e003():
 
 def test_packageversion_wrong_pkg_os():
     """Calling save() with a package version with a wrong OS should raise ValidationError."""
-    os2 = OS.objects.get(name='os2')
+    os2 = OS.objects.get(name='Ubuntu 24.04')
     host_package = models.HostPackage.objects.get(host__name='host1.example.com', package__name='package3')
     host_package.package_version.os = os2
 
@@ -52,7 +52,7 @@ def test_packageversion_wrong_pkg_os():
 
 def test_packageversion_wrong_upgrade_os():
     """Calling save() with an upgradable package version with a wrong OS should raise ValidationError."""
-    os2 = OS.objects.get(name='os2')
+    os2 = OS.objects.get(name='Ubuntu 24.04')
     host_package = models.HostPackage.objects.get(host__name='host1.example.com', package__name='package1')
     host_package.upgradable_version.os = os2
 

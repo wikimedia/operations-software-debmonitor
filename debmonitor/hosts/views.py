@@ -4,6 +4,7 @@ import logging
 from collections import defaultdict
 
 from django import http
+from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.db.models import BooleanField, Case, Count, When
 from django.shortcuts import get_object_or_404, render
@@ -152,8 +153,15 @@ def update(request, name):
     try:
         os = OS.objects.get(name=payload['os'])
     except OS.DoesNotExist as e:
-        return http.HttpResponseBadRequest(
-            "Unable to find OS '{os}': {e}".format(os=payload['os'], e=e), content_type=TEXT_PLAIN)
+        logger.info(
+            "The OS name %s is not present in the DB. Error: %s", payload['os'], e)
+        try:
+            os = OS(name=payload['os'])
+            os.clean_fields()
+            os.save()
+        except ValidationError as e:
+            return http.HttpResponseBadRequest(
+                "OS name '{os}' is not valid: {e}".format(os=payload['os'], e=e), content_type=TEXT_PLAIN)
 
     message = "Unable to update host '{host}'".format(host=name)
     try:
