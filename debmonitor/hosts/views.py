@@ -181,8 +181,11 @@ def _update_v1(request, name, os, payload):
     start_time = timezone.now()
     kernel, _ = KernelVersion.objects.get_or_create(name=payload['running_kernel']['version'], os=os)
 
+    os_changed = False
     try:
         host = Host.objects.get(name=name)
+        if host.os != os:
+            os_changed = True
         host.os = os
         host.kernel = kernel
         host.save()  # Always update at least the modification time
@@ -193,6 +196,14 @@ def _update_v1(request, name, os, payload):
         host.save()
         host_packages = {}
         logger.info("Created Host '%s'", name)
+
+    # Transition all existing packages with the new OS name to prevent OS mismatching
+    if os_changed:
+        for host_package in host_packages.values():
+            _host_package_migrate_os(os, host_package)
+
+        # Refresh the cached image packages to ensure we get the data from the database
+        host_packages = {host_pkg.package.name: host_pkg for host_pkg in HostPackage.objects.filter(host=host)}
 
     existing_not_updated = []
     existing_upgradable_not_updated = []
@@ -219,6 +230,30 @@ def _update_v1(request, name, os, payload):
 
     if payload['update_type'] == 'full':
         _garbage_collection(host, name, start_time, existing_not_updated, existing_upgradable_not_updated)
+
+
+def _host_package_migrate_os(os, host_package):
+    """Migrate to the new OS an HostPackage object with the related package and upgradable package."""
+    package_args = {
+        "os": os,
+        "name": host_package.package.name,
+        "source": host_package.package_version.src_package_version.src_package.name,
+    }
+    package_version, _ = PackageVersion.objects.get_or_create(
+        version=host_package.package_version.version, **package_args)
+    host_package.package_version = package_version
+    host_package.package = package_version.package
+
+    if host_package.upgradable_version is not None:
+        package_args["name"] = host_package.upgradable_package.name
+        package_args["source"] = host_package.upgradable_version.src_package_version.src_package.name
+
+        upgradable_version, _ = PackageVersion.objects.get_or_create(
+            version=host_package.upgradable_version.version, **package_args)
+        host_package.upgradable_version = upgradable_version
+        host_package.upgradable_package = upgradable_version.package
+
+    host_package.save()
 
 
 def _garbage_collection(host, name, start_time, existing_not_updated, existing_upgradable_not_updated):
