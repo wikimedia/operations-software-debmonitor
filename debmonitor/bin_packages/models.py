@@ -28,11 +28,11 @@ class PackageVersionManager(SelectManager):
     def get_or_create(self, **kwargs):
         """Override parent method to lazily create the missing objects."""
         arguments = {'version': kwargs['version'], 'os': kwargs['os']}
-        if ('host_package' in kwargs and kwargs['host_package'] is not None and
-                kwargs['host_package'].package_version.src_package_version.src_package.name == kwargs['source']):
+        if ('entity_package' in kwargs and kwargs['entity_package'] is not None and
+                kwargs['entity_package'].package_version.src_package_version.src_package.name == kwargs['source']):
             # Use already queried objects
-            arguments['package'] = kwargs['host_package'].package_version.package
-            src_package = kwargs['host_package'].package_version.src_package_version.src_package
+            arguments['package'] = kwargs['entity_package'].package_version.package
+            src_package = kwargs['entity_package'].package_version.src_package_version.src_package
         else:
             arguments['package'], _ = Package.objects.get_or_create(name=kwargs['name'])
             src_package = None

@@ -248,7 +248,7 @@ def _process_installed(host, os, host_packages, existing_not_updated, item):
         existing_not_updated.append(existing.pk)
         return  # Already up-to-date
 
-    package_version, _ = PackageVersion.objects.get_or_create(os=os, host_package=existing, **item)
+    package_version, _ = PackageVersion.objects.get_or_create(os=os, entity_package=existing, **item)
     if existing is not None:
         existing.package_version = package_version
         existing.upgradable_package = None
@@ -270,7 +270,7 @@ def _process_upgradable(host, os, host_packages, existing_upgradable_not_updated
             return  # Already up-to-date
 
         upgradable_version, _ = PackageVersion.objects.get_or_create(
-            os=os, version=item['version_to'], host_package=existing, **item)
+            os=os, version=item['version_to'], entity_package=existing, **item)
 
         if existing.package_version == upgradable_version:  # The package has been already upgraded
             existing.upgradable_package = None

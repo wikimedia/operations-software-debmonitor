@@ -188,12 +188,12 @@ def _update_v1(request, name, os, payload):
         im = Image.objects.get(name=name)
         im.os = os
         im.save()  # Always update at least the modification time
-        images_packages = {image_pkg.package.name: image_pkg for image_pkg in ImagePackage.objects.filter(image=im)}
+        image_packages = {image_pkg.package.name: image_pkg for image_pkg in ImagePackage.objects.filter(image=im)}
 
     except Image.DoesNotExist:
         im = Image(name=name, os=os)
         im.save()
-        images_packages = {}
+        image_packages = {}
         logger.info("Created image '%s'", name)
 
     existing_not_updated = []
@@ -201,13 +201,13 @@ def _update_v1(request, name, os, payload):
 
     installed = payload.get('installed', [])
     for item in installed:
-        _process_installed(im, os, images_packages, existing_not_updated, item)
+        _process_installed(im, os, image_packages, existing_not_updated, item)
 
     logger.info("Tracked %d installed packages for image '%s'", len(installed), name)
 
     uninstalled = payload.get('uninstalled', [])
     for item in uninstalled:
-        existing = images_packages.get(item['name'], None)
+        existing = image_packages.get(item['name'], None)
         if existing is not None:
             existing.delete()
 
@@ -215,7 +215,7 @@ def _update_v1(request, name, os, payload):
 
     upgradable = payload.get('upgradable', [])
     for item in upgradable:
-        _process_upgradable(im, os, images_packages, existing_upgradable_not_updated, item)
+        _process_upgradable(im, os, image_packages, existing_upgradable_not_updated, item)
 
     logger.info("Tracked %d upgradable packages for image '%s'", len(upgradable), name)
 
@@ -251,7 +251,7 @@ def _process_installed(image, os, image_packages, existing_not_updated, item):
         existing_not_updated.append(existing.pk)
         return  # Already up-to-date
 
-    package_version, _ = PackageVersion.objects.get_or_create(os=os, image_package=existing, **item)
+    package_version, _ = PackageVersion.objects.get_or_create(os=os, entity_package=existing, **item)
     if existing is not None:
         existing.package_version = package_version
         existing.upgradable_imagepackage = None
@@ -274,7 +274,7 @@ def _process_upgradable(image, os, image_packages, existing_upgradable_not_updat
             return  # Already up-to-date
 
         upgradable_version, _ = PackageVersion.objects.get_or_create(
-            os=os, version=item['version_to'], image_package=existing, **item)
+            os=os, version=item['version_to'], entity_package=existing, **item)
 
         if existing.package_version == upgradable_version:  # The package has been already upgraded
             existing.upgradable_imagepackage = None
