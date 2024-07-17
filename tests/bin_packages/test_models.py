@@ -23,13 +23,13 @@ def test_packageversion_str():
     package_str = str(package)
     assert 'package1' in package_str
     assert '1.0.0-1' in package_str
-    assert 'os1' in package_str
+    assert 'Debian 11' in package_str
 
 
 def test_packageversion_get_or_create():
     """Calling the get_or_create() method of PackageVersion should lazily create any missing intermediate object."""
     package_name = str(uuid.uuid4())
-    os = OS.objects.get(name='os1')
+    os = OS.objects.get(name='Debian 11')
     package, created = models.PackageVersion.objects.get_or_create(
         name=package_name, version='1.2.3-1', source=package_name, os=os)
     assert created
@@ -40,8 +40,8 @@ def test_packageversion_get_or_create():
 def test_packageversion_clean():
     """Calling save() with some invalida data should raise ValidationError."""
     package_name = str(uuid.uuid4())
-    os1 = OS.objects.get(name='os1')
-    os2 = OS.objects.get(name='os2')
+    os1 = OS.objects.get(name='Debian 11')
+    os2 = OS.objects.get(name='Ubuntu 24.04')
     package, created = models.PackageVersion.objects.get_or_create(
         name=package_name, version='1.2.3-1', source=package_name, os=os1)
     assert created

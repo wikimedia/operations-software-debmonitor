@@ -5,7 +5,7 @@ import pytest
 from django.core.management import call_command
 from django.utils import timezone
 
-from hosts.models import HostPackage
+from hosts.models import Host, HostPackage
 from images.models import Image
 
 
@@ -13,8 +13,9 @@ from images.models import Image
 def test_command_output_noop():
     """Calling the custom debmonitorgc command should run the garbage collection in the DB as a noop."""
     out = StringIO()
-    # Update all images to prevent any deletion.
+    # Update all images and hosts to prevent any deletion.
     Image.objects.select_related(None).update(modified=timezone.now())
+    Host.objects.select_related(None).update(modified=timezone.now())
     call_command('debmonitorgc', stdout=out)
 
     objects = (
@@ -45,6 +46,7 @@ def test_command_output_delete():
     )
 
     assert 'Deleted 2 Image objects not updated in the last 90 days' in out.getvalue()
+    assert 'Deleted 3 Host objects not updated in the last 15 days' in out.getvalue()
     for num, obj, ref_obj in objects:
         message = 'Deleted {num} {obj} objects not referenced by any {ref_obj}'.format(
             num=num, obj=obj, ref_obj=ref_obj)

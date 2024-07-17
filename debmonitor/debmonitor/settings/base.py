@@ -106,6 +106,13 @@ if DEBMONITOR_CONFIG.get('MYSQL', {}):
             'OPTIONS': DEBMONITOR_CONFIG['MYSQL']['OPTIONS'],
         },
     }
+elif DEBMONITOR_CONFIG.get('SQLITE', {}):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': DEBMONITOR_CONFIG['SQLITE']['FILE'],
+        },
+    }
 else:
     DATABASES = {
         'default': {
@@ -113,6 +120,8 @@ else:
             'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
         },
     }
+
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 # Password validation
 
@@ -138,6 +147,7 @@ USE_I18N = False
 USE_L10N = False
 USE_TZ = True
 TIME_ZONE = DEBMONITOR_CONFIG.get('TIME_ZONE', 'UTC')
+
 
 # Static files (CSS, JavaScript, Images)
 

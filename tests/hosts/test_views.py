@@ -19,7 +19,7 @@ MISSING_HOST_URL = INDEX_URL + 'non_existing_host.example.com'
 PAYLOAD_NEW_OK = """{
     "api_version": "v1",
     "update_type": "full",
-    "os": "os1",
+    "os": "Debian 13",
     "hostname": "%(uuid)s",
     "running_kernel": {
         "version": "%(uuid)s",
@@ -41,7 +41,7 @@ PAYLOAD_NEW_OK = """{
 PAYLOAD_EXISTING_NO_UPDATE = """{
     "api_version": "v1",
     "update_type": "full",
-    "os": "os1",
+    "os": "Debian 11",
     "hostname": "host1.example.com",
     "running_kernel": {
         "version": "100",
@@ -55,7 +55,7 @@ PAYLOAD_EXISTING_NO_UPDATE = """{
 PAYLOAD_EXISTING_UPDATE = """{
     "api_version": "v1",
     "update_type": "full",
-    "os": "os1",
+    "os": "Debian 11",
     "hostname": "host1.example.com",
     "running_kernel": {
         "version": "100",
@@ -76,13 +76,29 @@ PAYLOAD_EXISTING_UPDATE = """{
     ]
 }"""
 PAYLOAD_NEW_KO = """{
-    "os": "os1",
+    "os": "Debian 11",
     "hostname": "%(uuid)s"
 }"""
 PAYLOAD_UPGRADABLE = """{
     "api_version": "v1",
     "update_type": "upgradable",
-    "os": "os1",
+    "os": "Debian 11",
+    "hostname": "host1.example.com",
+    "running_kernel": {
+        "version": "100",
+        "version": "os1-100-2"
+    },
+    "upgradable": [
+        {"name": "package1", "version_from": "1.0.0-1", "version_to": "1.0.0-2", "source": "package1", "type": ""},
+        {"name": "pkg3-%(uuid)s", "version_from": "1.0.0-1", "version_to": "1.0.0-2", "source": "pkg3-%(uuid)s",
+         "type": ""}
+    ]
+}"""
+
+PAYLOAD_UPGRADABLE_OS_CHANGE = """{
+    "api_version": "v1",
+    "update_type": "upgradable",
+    "os": "Debian 12",
     "hostname": "host1.example.com",
     "running_kernel": {
         "version": "100",
@@ -300,6 +316,16 @@ def test_update_status_code_upgradable(client):
     """Updating an existing host with a correct payload with upgradable updates should return 201 Created."""
     rand = str(uuid.uuid4())
     response = client.generic('POST', EXISTING_HOST_UPDATE_URL, PAYLOAD_UPGRADABLE % {'uuid': rand})
+    assert response.status_code == 201
+
+
+@pytest.mark.django_db
+def test_update_status_code_upgradable_os_change(client):
+    """Updating an existing host with a correct payload with upgradable
+       updates and a OS change should return 201 Created.
+    """
+    rand = str(uuid.uuid4())
+    response = client.generic('POST', EXISTING_HOST_UPDATE_URL, PAYLOAD_UPGRADABLE_OS_CHANGE % {'uuid': rand})
     assert response.status_code == 201
 
 

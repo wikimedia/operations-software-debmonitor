@@ -304,14 +304,14 @@
         "model": "src_packages.os",
         "pk": 1,
         "fields": {
-            "name": "os1"
+            "name": "Debian 11"
         }
     },
     {
         "model": "src_packages.os",
         "pk": 2,
         "fields": {
-            "name": "os2"
+            "name": "Ubuntu 24.04"
         }
     },
     {

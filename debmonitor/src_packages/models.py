@@ -1,3 +1,4 @@
+from django.core.validators import RegexValidator
 from django.db import models
 
 from debmonitor import SelectManager
@@ -6,7 +7,17 @@ from debmonitor import SelectManager
 class OS(models.Model):
     """Operating system model."""
 
-    name = models.CharField(max_length=32, unique=True, help_text='Operating system name.')
+    validation_regex = r'^(Debian( \d\d)?|Ubuntu( \d\d\.\d\d)?)$'
+    name = models.CharField(
+        max_length=32, unique=True, help_text='Operating system name.',
+        validators=[
+            RegexValidator(
+                regex=validation_regex,
+                message=(
+                    "The OS name needs to follow the following pattern: "
+                    f"{validation_regex}")
+            ),
+        ])
 
     class Meta:
         """Additional metadata."""

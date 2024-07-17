@@ -44,7 +44,7 @@ def test_disable_check_e003():
 
 def test_packageversion_wrong_pkg_os():
     """Calling save() with a package version with a wrong OS should raise ValidationError."""
-    os2 = OS.objects.get(name='os2')
+    os2 = OS.objects.get(name='Ubuntu 24.04')
     image_package = models.ImagePackage.objects.get(image__name=IMAGENAME, package__name='nodejs')
     image_package.package_version.os = os2
 
@@ -54,7 +54,7 @@ def test_packageversion_wrong_pkg_os():
 
 def test_packageversion_wrong_upgrade_os():
     """Calling save() with an upgradable package version with a wrong OS should raise ValidationError."""
-    os2 = OS.objects.get(name='os2')
+    os2 = OS.objects.get(name='Ubuntu 24.04')
     image_package = models.ImagePackage.objects.get(image__name=IMAGENAME, package__name='nodejs')
     image_package.upgradable_imageversion.os = os2
 

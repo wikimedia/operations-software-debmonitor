@@ -4,6 +4,7 @@ import logging
 from collections import defaultdict
 
 from django import http
+from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.db.models import BooleanField, Case, Count, When
 from django.shortcuts import get_object_or_404, render
@@ -91,7 +92,7 @@ class DetailView(View):
 
     def get(self, request, name):
         """Host detail page."""
-        host = get_object_or_404(Host.objects.filter(name=name))
+        host = get_object_or_404(Host, name=name)
 
         host_packages = HostPackage.objects.filter(host=host).annotate(
             has_upgrade=Case(
@@ -124,7 +125,7 @@ class DetailView(View):
         return render(request, 'hosts/detail.html', args)
 
     def delete(self, request, name):
-        host = get_object_or_404(Host.objects.filter(name=name))
+        host = get_object_or_404(Host, name=name)
         host.delete()
 
         return http.HttpResponse(status=204, content_type=TEXT_PLAIN)
@@ -152,8 +153,15 @@ def update(request, name):
     try:
         os = OS.objects.get(name=payload['os'])
     except OS.DoesNotExist as e:
-        return http.HttpResponseBadRequest(
-            "Unable to find OS '{os}': {e}".format(os=payload['os'], e=e), content_type=TEXT_PLAIN)
+        logger.info(
+            "The OS name %s is not present in the DB. Error: %s", payload['os'], e)
+        try:
+            os = OS(name=payload['os'])
+            os.clean_fields()
+            os.save()
+        except ValidationError as e:
+            return http.HttpResponseBadRequest(
+                "OS name '{os}' is not valid: {e}".format(os=payload['os'], e=e), content_type=TEXT_PLAIN)
 
     message = "Unable to update host '{host}'".format(host=name)
     try:
@@ -173,8 +181,11 @@ def _update_v1(request, name, os, payload):
     start_time = timezone.now()
     kernel, _ = KernelVersion.objects.get_or_create(name=payload['running_kernel']['version'], os=os)
 
+    os_changed = False
     try:
         host = Host.objects.get(name=name)
+        if host.os != os:
+            os_changed = True
         host.os = os
         host.kernel = kernel
         host.save()  # Always update at least the modification time
@@ -185,6 +196,14 @@ def _update_v1(request, name, os, payload):
         host.save()
         host_packages = {}
         logger.info("Created Host '%s'", name)
+
+    # Transition all existing packages with the new OS name to prevent OS mismatching
+    if os_changed:
+        for host_package in host_packages.values():
+            _host_package_migrate_os(os, host_package)
+
+        # Refresh the cached image packages to ensure we get the data from the database
+        host_packages = {host_pkg.package.name: host_pkg for host_pkg in HostPackage.objects.filter(host=host)}
 
     existing_not_updated = []
     existing_upgradable_not_updated = []
@@ -211,6 +230,30 @@ def _update_v1(request, name, os, payload):
 
     if payload['update_type'] == 'full':
         _garbage_collection(host, name, start_time, existing_not_updated, existing_upgradable_not_updated)
+
+
+def _host_package_migrate_os(os, host_package):
+    """Migrate to the new OS an HostPackage object with the related package and upgradable package."""
+    package_args = {
+        "os": os,
+        "name": host_package.package.name,
+        "source": host_package.package_version.src_package_version.src_package.name,
+    }
+    package_version, _ = PackageVersion.objects.get_or_create(
+        version=host_package.package_version.version, **package_args)
+    host_package.package_version = package_version
+    host_package.package = package_version.package
+
+    if host_package.upgradable_version is not None:
+        package_args["name"] = host_package.upgradable_package.name
+        package_args["source"] = host_package.upgradable_version.src_package_version.src_package.name
+
+        upgradable_version, _ = PackageVersion.objects.get_or_create(
+            version=host_package.upgradable_version.version, **package_args)
+        host_package.upgradable_version = upgradable_version
+        host_package.upgradable_package = upgradable_version.package
+
+    host_package.save()
 
 
 def _garbage_collection(host, name, start_time, existing_not_updated, existing_upgradable_not_updated):
@@ -240,7 +283,7 @@ def _process_installed(host, os, host_packages, existing_not_updated, item):
         existing_not_updated.append(existing.pk)
         return  # Already up-to-date
 
-    package_version, _ = PackageVersion.objects.get_or_create(os=os, host_package=existing, **item)
+    package_version, _ = PackageVersion.objects.get_or_create(os=os, entity_package=existing, **item)
     if existing is not None:
         existing.package_version = package_version
         existing.upgradable_package = None
@@ -262,7 +305,7 @@ def _process_upgradable(host, os, host_packages, existing_upgradable_not_updated
             return  # Already up-to-date
 
         upgradable_version, _ = PackageVersion.objects.get_or_create(
-            os=os, version=item['version_to'], host_package=existing, **item)
+            os=os, version=item['version_to'], entity_package=existing, **item)
 
         if existing.package_version == upgradable_version:  # The package has been already upgraded
             existing.upgradable_package = None
