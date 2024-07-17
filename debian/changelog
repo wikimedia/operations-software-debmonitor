@@ -1,3 +1,17 @@
+debmonitor (0.5.0-1) unstable; urgency=medium
+
+  * Hosts: automatically migrate to a new OS if needed.
+  * Images: take advantage of performance optimization.
+  * Allow one to save new OS names without them being present on the DB.
+  * debian: run the pytest suite directly without using tox, to avoid using
+            the network to pull down dependencies.
+  * debian: Update control's Build-depends with the pytest dependencies.
+  * debian: Override the dh_install step to avoid missing exec flags when
+            evaluating .install files.
+  * debian: Fix too long extended description lines (lintian warning).
+
+ -- Luca Toscano <ltoscano@wikimedia.org>  Wed, 17 Jul 2024 15:10:58 +0200
+
 debmonitor (0.4.0-3) unstable; urgency=medium
 
   * Add Jquery dependency.

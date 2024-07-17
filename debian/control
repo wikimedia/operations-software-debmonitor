@@ -11,7 +11,11 @@ Build-Depends:
     python3-pytest-cov,
     python3-requests-mock,
     python3-setuptools-scm,
-    tox
+    python3-django,
+    python3-pytest-django,
+    python3-django-stronghold,
+    python3-django-csp,
+    python3-setuptools
 Standards-Version: 4.1.1
 
 Package: debmonitor-server
@@ -24,9 +28,12 @@ Depends:
     ${python3:Depends},
     ${misc:Depends},
 Description: DebMonitor tracks Debian packages across a fleet of hosts
- DebMonitor is a Django-based web application that allows to track Debian packages installed across a fleet of hosts,
- along with their pending software/security updates. It provides also a standalone command line script (CLI) that,
- when distributed in the target hosts, allows to automatically update DebMonitor's database using APT and DPKG hooks.
+ DebMonitor is a Django-based web application that allows the tracking of Debian
+ packages installed across a fleet of hosts, along with their pending
+ software/security updates.
+ It also provides a standalone command line script (CLI) that, when distributed
+ on the target hosts, allows automatic updates of DebMonitor's database
+ using APT and DPKG hooks.
 
 
 Package:python3-debmonitor
@@ -35,8 +42,10 @@ Depends:
  ${python3:Depends},
  ${misc:Depends},
 Description: DebMonitor tracks Debian packages across a fleet of hosts (Python modules)
- DebMonitor is a Django-based web application that allows to track Debian packages installed across a fleet of hosts,
- along with their pending software/security updates. It provides also a standalone command line script (CLI) that,
- when distributed in the target hosts, allows to automatically update DebMonitor's database using APT and DPKG hooks.
- This package contains the Python modules.
+ DebMonitor is a Django-based web application that allows to track Debian
+ packages installed across a fleet of hosts, along with their pending
+ software/security updates.
+ It provides also a standalone command line script (CLI) that, when distributed
+ on the target hosts, allows automatic updates of DebMonitor's database
+ using APT and DPKG hooks.
  .

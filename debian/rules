@@ -1,6 +1,21 @@
 #!/usr/bin/make -f
 export PYBUILD_NAME=debmonitor
 export DH_VERBOSE = 1
+export PYBUILD_TEST_PYTEST = 1
+export PYTHONPATH=debmonitor
+export DEBMONITOR_CONFIG=tests/config.json
 
 %:
 	dh $@ --with python3 --buildsystem=pybuild
+
+override_dh_install:
+	# For some mysterious reasons, the +x permissions in .install files
+	# are removed when pbuilder runs, ending up with failures like:
+	# dh_install: warning: Cannot find (any matches for) "=>" (tried in ., debian/tmp)
+	# Until we find a proper fix, this override seems doing exactly what's needed.
+	chmod +x debian/*.install
+	dh_install -O--buildsystem=pybuild
+
+
+override_dh_auto_test:
+	py.test-3 tests
