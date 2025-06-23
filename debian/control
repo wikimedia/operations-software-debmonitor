@@ -21,7 +21,6 @@ Standards-Version: 4.1.1
 Package: debmonitor-server
 Architecture: all
 Depends:
-    debmonitor-client,
     libjs-jquery,
     python3-debmonitor,
     uwsgi-plugin-python3,
