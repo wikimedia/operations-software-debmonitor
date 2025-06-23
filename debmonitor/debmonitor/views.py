@@ -3,16 +3,12 @@ import logging
 
 from collections import namedtuple
 
-from django import http
 from django.conf import settings
 from django.db.models import Count, F, Max, Min
 from django.shortcuts import render
 from django.views.decorators.http import require_GET, require_safe
 
-import debmonitor
-
 from bin_packages.models import Package, PackageVersion
-from debmonitor.decorators import verify_clients
 from hosts.models import Host, HostPackage, SECURITY_UPGRADE
 from images.models import Image, ImagePackage
 from kernels.models import KernelVersion
@@ -111,31 +107,6 @@ def index(request):
     }
 
     return render(request, 'index.html', args)
-
-
-@verify_clients
-@require_safe
-def client(request):
-    """Download the DebMonitor CLI script on GET, add custom headers with the version and checksum."""
-    try:
-        version, checksum, body = debmonitor.get_client()
-    except Exception as e:  # Force a response to avoid using the HTML template for all other 500s
-        message = 'Unable to retrieve client code'
-        logger.exception(message)
-        return http.HttpResponseServerError('{message}: {e}'.format(message=message, e=e), content_type='text/plain')
-
-    if request.method == 'HEAD':
-        response = http.HttpResponse()
-    elif request.method == 'GET':
-        response = http.HttpResponse(body, content_type='text/x-python')
-    else:  # pragma: no cover - this should never happen due to @require_safe
-        return http.HttpResponseBadRequest(
-            'Invalid method {method}'.format(method=request.method), content_type='text/plain')
-
-    response[CLIENT_VERSION_HEADER] = version
-    response[CLIENT_CHECKSUM_HEADER] = checksum
-
-    return response
 
 
 @require_GET

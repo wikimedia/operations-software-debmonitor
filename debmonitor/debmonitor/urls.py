@@ -11,7 +11,6 @@ if settings.DEBMONITOR_CONFIG.get('CAS', {}):
 
 urlpatterns = [
     path('', views.index, name='index'),
-    path('client', views.client, name='client'),
     path('search', views.search, name='search'),
     path('hosts/', include('hosts.urls')),
     path('images/', include('images.urls')),

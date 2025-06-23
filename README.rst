@@ -13,9 +13,7 @@ Target configuration
 
 To automate the tracking of the packages in the target hosts, follow these steps:
 
-* Deploy the standlone CLI script provided in ``utils/cli.py`` across the fleet, for example into
-  ``/usr/local/bin/debmonitor``, and make it executable, optionally modifying the shebang to force a specific Python
-  version. The script can also be downloaded directly from a DebMonitor server via its ``/client`` endpoint.
+* Deploy the Debmonitor client installing the ``debmonitor-client`` Debian package.
 * Optionally add a configuration file in ``/etc/debmonitor.conf`` (or in a different one passing the
   ``--config /path/to/config`` CLI argument) to avoid to pass the common options to the CLI. See the example file in
   ``doc/examples/client.conf``.
@@ -33,9 +31,7 @@ To automate the tracking of the packages in the target hosts, follow these steps
 
 * Set a daily or weekly crontab that executes DebMonitor to send the list of all installed and upgradable packages
   (do not set the ``-g`` or ``-u`` options). It is used as a reconciliation method if any of the hook would fail.
-  It is also required to run DebMonitor in full mode at least once to track all the packages. Optionally set the
-  ``--update`` option so that the script will automatically check for available updates and will overwrite itself with
-  the latest version available on the DebMonitor server.
+  It is also required to run DebMonitor in full mode at least once to track all the packages.
 
 See all the available options of the CLI with the ``-h/--help`` option.
 
