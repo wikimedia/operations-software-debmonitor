@@ -18,7 +18,7 @@ from bin_packages.models import PackageVersion
 from debmonitor.decorators import verify_clients
 from images.models import Image, ImagePackage, SECURITY_UPGRADE
 from src_packages.models import OS
-from debmonitor.middleware import TEXT_PLAIN
+from debmonitor.middleware import APPLICATION_JSON, TEXT_PLAIN
 
 
 logger = logging.getLogger(__name__)
@@ -93,6 +93,8 @@ class DetailView(View):
     def get(self, request, name):
         """Image detail page."""
         image = get_object_or_404(Image, name=name)
+        if request.META.get('HTTP_ACCEPT', '') == APPLICATION_JSON:
+            return http.JsonResponse(image.to_dict())
 
         image_packages = ImagePackage.objects.filter(image=image).annotate(
             has_upgrade=Case(
