@@ -92,9 +92,9 @@ class AuthHostMiddleware(object):
         if view_kwargs.get('name', None) is None:  # Nothing else to verify
             return
 
-        # For image submissions we don't validate the host name, but only whether the image data
-        # is submitted from a valid proxy host
-        if view_func.__module__ == 'images.views':
+        # For image and kubernetes submissions we don't validate the host name, but only whether the image or
+        # kubernetes data is submitted from a valid proxy host
+        if view_func.__module__ in ('images.views', 'kubernetes.views'):
             if not is_valid_image_proxy(cn):
                 return HttpResponseForbidden("Unauthorized to modify image '{name}' with certificate '{dn}'".format(
                     name=view_kwargs['name'], dn=ssl_dn), content_type=TEXT_PLAIN)
