@@ -17,6 +17,7 @@ urlpatterns = [
     path('kernels/', include('kernels.urls')),
     path('packages/', include('bin_packages.urls')),
     path('source-packages/', include('src_packages.urls')),
+    path('kubernetes/', include('kubernetes.urls')),
     path('admin/', admin.site.urls),
 ]
 

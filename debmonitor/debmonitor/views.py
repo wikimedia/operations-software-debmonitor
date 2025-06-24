@@ -12,6 +12,7 @@ from bin_packages.models import Package, PackageVersion
 from hosts.models import Host, HostPackage, SECURITY_UPGRADE
 from images.models import Image, ImagePackage
 from kernels.models import KernelVersion
+from kubernetes.models import KubernetesImage
 from src_packages.models import SrcPackage, SrcPackageVersion
 
 
@@ -62,6 +63,7 @@ def index(request):
         ]},
         {'title': 'Kernels', 'count': KernelVersion.objects.count(), 'url': 'kernels',
          'rows': []},
+        {'title': 'Live Kubernetes Images', 'count': KubernetesImage.objects.count(), 'url': 'kubernetes', 'rows': []},
         {'title': 'Binary Packages', 'count': Package.objects.count(), 'url': 'bin_packages', 'rows': [
             {'title': 'With upgrades', 'count': upgradable['upgradable_package__count'], 'style': 'warning'},
             {'title': 'With security upgrades', 'count': security_upgrades['upgradable_package__count'],

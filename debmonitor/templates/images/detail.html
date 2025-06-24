@@ -6,6 +6,8 @@
   <dd class="col-sm-9">{{ image.os.name }}</dd>
   <dt class="col-sm-3">Last update</dt>
   <dd class="col-sm-9"><span data-toggle="tooltip" title="{{ image.modified|date:"r" }}">{{ image.modified|timesince }} ago</span></dd>
+  <dt class="col-sm-3">Kubernetes instances</dt>
+  <dd class="col-sm-9">{{ total_instances }}</dd>
   {% if external_links %}
   <dt class="col-sm-3">External resources</dt>
   <dd class="col-sm-9">

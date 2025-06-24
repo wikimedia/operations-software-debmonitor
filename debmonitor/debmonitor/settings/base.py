@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'images',
     'kernels',
     'src_packages',
+    'kubernetes',
 ]
 
 MIDDLEWARE = [

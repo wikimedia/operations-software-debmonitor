@@ -96,6 +96,7 @@ class DetailView(View):
         if request.META.get('HTTP_ACCEPT', '') == APPLICATION_JSON:
             return http.JsonResponse(image.to_dict())
 
+        total_instances = sum(instance.instances for instance in image.instances.all())
         image_packages = ImagePackage.objects.filter(image=image).annotate(
             has_upgrade=Case(
                 When(upgradable_imageversion__isnull=False, then=True),
@@ -122,6 +123,7 @@ class DetailView(View):
             'subtitle': 'Image',
             'table_headers': table_headers,
             'title': image.name,
+            'total_instances': total_instances,
             'upgrades_column': 2,
         }
         return render(request, 'images/detail.html', args)

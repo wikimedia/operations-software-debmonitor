@@ -47,6 +47,9 @@
           <li class="nav-item">
             <a class="nav-link{% if section == 'images' %} active{% endif %}" href="{% url 'images:index' %}">Images</a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link{% if section == 'kubernetes' %} active{% endif %}" href="{% url 'kubernetes:index' %}">Kubernetes</a>
+          </li>
         </ul>
         <form class="form-inline my-2 my-lg-0" action="{% url 'search' %}" method="get">
           <input name="q" pattern=".{{ "{" }}{{ SEARCH_MIN_LENGTH }},}" class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search" title="At least {{ SEARCH_MIN_LENGTH }} characters required." required>
