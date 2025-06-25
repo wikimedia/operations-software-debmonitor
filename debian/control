@@ -24,6 +24,7 @@ Depends:
     libjs-jquery,
     python3-debmonitor,
     uwsgi-plugin-python3,
+    libjs-bootstrap4,
     ${python3:Depends},
     ${misc:Depends},
 Description: DebMonitor tracks Debian packages across a fleet of hosts
