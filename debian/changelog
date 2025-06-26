@@ -1,3 +1,9 @@
+debmonitor (0.6.0-1) unstable; urgency=medium
+
+  * v0.6.0 upstream release.
+
+ -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Thu, 26 Jun 2025 11:01:05 -0000
+
 debmonitor (0.5.0-1) unstable; urgency=medium
 
   * Hosts: automatically migrate to a new OS if needed.
