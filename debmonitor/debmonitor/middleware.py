@@ -17,6 +17,7 @@ SSL_CLIENT_SUBJECT_DN_HEADER = 'HTTP_X_CLIENT_CERT_SUBJECT_DN'
 # compared to requiring an LDAP library just to parse the DN.
 DN_PARSE_PATTERN = re.compile('(^|,)CN=(?P<cn>[^,]+)(,|$)', re.I)
 TEXT_PLAIN = 'text/plain'
+APPLICATION_JSON = 'application/json'
 
 
 def get_host_cn(dn):
@@ -72,9 +73,11 @@ class AuthHostMiddleware(object):
         if not settings.DEBMONITOR_VERIFY_CLIENTS:
             return
 
+        request_accept = request.META.get('HTTP_ACCEPT', '')
         verify_clients = getattr(view_func, 'debmonitor_verify_clients', False)
         verify_clients_methods = getattr(view_func, 'debmonitor_verify_clients_methods', [])
-        if not verify_clients and request.method not in verify_clients_methods:
+        if (not verify_clients and request.method not in verify_clients_methods
+                and APPLICATION_JSON not in request_accept):
             return
 
         ssl_verify = request.META.get(SSL_CLIENT_VERIFY_HEADER, '')
@@ -89,9 +92,9 @@ class AuthHostMiddleware(object):
         if view_kwargs.get('name', None) is None:  # Nothing else to verify
             return
 
-        # For image submissions we don't validate the host name, but only whether the image data
-        # is submitted from a valid proxy host
-        if view_func.__module__ == 'images.views':
+        # For image and kubernetes submissions we don't validate the host name, but only whether the image or
+        # kubernetes data is submitted from a valid proxy host
+        if view_func.__module__ in ('images.views', 'kubernetes.views'):
             if not is_valid_image_proxy(cn):
                 return HttpResponseForbidden("Unauthorized to modify image '{name}' with certificate '{dn}'".format(
                     name=view_kwargs['name'], dn=ssl_dn), content_type=TEXT_PLAIN)

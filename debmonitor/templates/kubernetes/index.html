@@ -1,0 +1,12 @@
+{% extends "../base_table.html" %}
+
+{% block table_body %}
+{% for image in images %}
+<tr>
+  <td>{{ image.cluster }}</td>
+  <td>{{ image.namespace }}</td>
+  <td><a href="{% url 'images:detail' image.image.name %}">{{ image.image.name }}</a></td>
+  <td>{{ image.instances }}</td>
+</tr>
+{% endfor %}
+{% endblock %}

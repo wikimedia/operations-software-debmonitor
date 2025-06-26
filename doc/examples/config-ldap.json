@@ -45,4 +45,5 @@
             "is_superuser": "cn=admin,ou=groups,dc=example,dc=com"
         }
     }
+    "JAVASCRIPT_STORAGE": "Debian",
 }

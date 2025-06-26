@@ -48,6 +48,10 @@ class Image(models.Model):
         """Model representation."""
         return self.name
 
+    def to_dict(self):
+        """Simple dict representation of the Image."""
+        return {'name': self.name, 'os': self.os.name, 'created': self.created, 'modified': self.modified}
+
     @classmethod
     def _check_m2m_through_same_relationship(cls):
         return []  # Disable models.E003 check for this model

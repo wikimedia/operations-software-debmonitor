@@ -27,4 +27,5 @@
         "CAS_CREATE_USER": "FALSE",
         "CAS_VERSION": "2"
     }
+    "JAVASCRIPT_STORAGE": "Debian",
 }

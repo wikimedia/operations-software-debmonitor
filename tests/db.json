@@ -437,7 +437,7 @@
         "model": "images.image",
         "pk": 2,
         "fields": {
-            "name": "mathoid",
+            "name": "registry.example.com/component/image-deployed:1.2.3-1",
             "os": 1,
             "created": "2019-10-19T14:10:09.483Z",
             "modified": "2019-10-19T14:10:09.483Z"
@@ -538,6 +538,18 @@
             "upgradable_imageversion": null,
             "created": "2017-11-27T22:10:09.529Z",
             "modified": "2017-11-27T22:10:09.618Z"
+        }
+    },
+    {
+        "model": "kubernetes.kubernetesimage",
+        "pk": 1,
+        "fields": {
+            "cluster": "ClusterA",
+            "namespace": "NamespaceA",
+            "image": 2,
+            "instances": 2,
+            "created": "2025-06-24T11:28:04.311Z",
+            "modified": "2025-06-24T11:28:04.311Z"
         }
     }
 ]

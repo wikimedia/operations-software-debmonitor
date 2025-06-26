@@ -25,6 +25,7 @@ DEBMONITOR_PROXY_IMAGES = DEBMONITOR_CONFIG.get('PROXY_IMAGES', [])
 DEBMONITOR_HOST_EXTERNAL_LINKS = DEBMONITOR_CONFIG.get('HOST_EXTERNAL_LINKS', {})
 DEBMONITOR_IMAGES_EXTERNAL_LINKS = DEBMONITOR_CONFIG.get('IMAGE_EXTERNAL_LINKS', {})
 DEBMONITOR_SEARCH_MIN_LENGTH = DEBMONITOR_CONFIG.get('SEARCH_MIN_LENGTH', 3)
+DEBMONITOR_JAVASCRIPT_STORAGE = DEBMONITOR_CONFIG.get('JAVASCRIPT_STORAGE', 'Debian')
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -48,6 +49,7 @@ INSTALLED_APPS = [
     'images',
     'kernels',
     'src_packages',
+    'kubernetes',
 ]
 
 MIDDLEWARE = [
@@ -85,6 +87,7 @@ TEMPLATES = [
                 'csp.context_processors.nonce',
                 'hosts.context.security_upgrade',
                 'debmonitor.context.search_min_length',
+                'debmonitor.context.javascript_storage',
             ],
         },
     },

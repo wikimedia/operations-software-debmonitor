@@ -6,7 +6,7 @@ import pytest
 
 from django.urls import resolve, reverse
 
-# from debmonitor import middleware
+from debmonitor.middleware import APPLICATION_JSON
 from images import views
 from images.models import Image, ImagePackage
 from tests.conftest import IMAGEBASENAME, IMAGENAME, setup_auth_settings, validate_status_code
@@ -111,6 +111,18 @@ def test_detail_status_code_missing(client, settings, require_login, verify_clie
     setup_auth_settings(settings, require_login, verify_clients)
     response = client.get(MISSING_IMAGE_URL)
     validate_status_code(response, require_login, default=404)
+
+
+@pytest.mark.django_db
+def test_detail_api(client, settings, require_login, verify_clients):
+    """Requesting an image detail via the API should return its json, if authenticated."""
+    setup_auth_settings(settings, require_login, verify_clients)
+    response = client.get(EXISTING_IMAGE_URL, HTTP_ACCEPT=APPLICATION_JSON)
+    validate_status_code(response, require_login, verify_clients=verify_clients)
+    if not require_login and not verify_clients:
+        data = response.json()
+        assert data['name'] == IMAGENAME
+        assert data['os'] == 'Debian 11'
 
 
 @pytest.mark.django_db
