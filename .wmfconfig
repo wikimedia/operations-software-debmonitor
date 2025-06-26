@@ -2,9 +2,9 @@
 skip_changelog = true
 
 [github]
-repository = debmonitor
+repository = operations-software-debmonitor
 
 [debian]
-distros = stretch,buster,bullseye
+distros = bookworm
 source_package = debmonitor
-binary_package = debmonitor-client
+binary_packages = debmonitor-server,python3-debmonitor
