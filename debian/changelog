@@ -1,3 +1,9 @@
+debmonitor (0.6.2-1) unstable; urgency=medium
+
+  * v0.6.2 upstream release.
+
+ -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Fri, 27 Jun 2025 16:37:49 -0000
+
 debmonitor (0.6.1-1) unstable; urgency=medium
 
   * v0.6.1 upstream release.
