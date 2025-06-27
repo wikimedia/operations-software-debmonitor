@@ -67,3 +67,12 @@ def test_search_valid(client, settings, require_login, verify_clients):
     if response.status_code == 200:
         assert 'Invalid search query' not in response.content.decode('utf-8')
         assert 'href="/packages/package1"' in response.content.decode('utf-8')
+
+
+def test_auth_check(client, settings, require_login, verify_clients):
+    """Requesting the auth-check endpoint should return OK if authenticated."""
+    setup_auth_settings(settings, require_login, verify_clients)
+    response = client.get('/auth-check')
+    validate_status_code(response, require_login, verify_clients=verify_clients)
+    if not require_login and not verify_clients:
+        assert response.content.decode().strip() == "OK"

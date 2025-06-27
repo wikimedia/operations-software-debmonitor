@@ -76,7 +76,7 @@ def update_kubernetes_images(request):
     message = f'Unable to update Kubernetes images for cluster {cluster}'
     try:
         _update_v1(request, cluster, images)
-    except (KeyError, TypeError, ValueError) as e:
+    except (KeyError, TypeError, ValueError, Image.DoesNotExist) as e:
         logger.exception(message)
         return http.HttpResponseBadRequest(f'{message}: {e}', content_type=TEXT_PLAIN)
     except Exception as e:  # Force a response to avoid using the HTML template for all other 500s

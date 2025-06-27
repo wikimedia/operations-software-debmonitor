@@ -3,12 +3,16 @@ import logging
 
 from collections import namedtuple
 
+from django import http
 from django.conf import settings
 from django.db.models import Count, F, Max, Min
 from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_safe
 
 from bin_packages.models import Package, PackageVersion
+from debmonitor.decorators import verify_clients
+from debmonitor.middleware import TEXT_PLAIN
 from hosts.models import Host, HostPackage, SECURITY_UPGRADE
 from images.models import Image, ImagePackage
 from kernels.models import KernelVersion
@@ -150,3 +154,11 @@ def search(request):
     }
 
     return render(request, 'search.html', args)
+
+
+@verify_clients
+@csrf_exempt
+@require_safe
+def auth_check(request):
+    """Endpoint to verify the authentication via certificate."""
+    return http.HttpResponse('OK', content_type=TEXT_PLAIN)
