@@ -4,6 +4,6 @@
 set -e
 
 # Collect JavaScript, stylesheets and images
-/usr/bin/debmonitor collectstatic --no-input
+debmonitor collectstatic --no-input
 
 #DEBHELPER#

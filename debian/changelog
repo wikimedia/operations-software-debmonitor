@@ -1,3 +1,14 @@
+debmonitor (0.6.4-1) unstable; urgency=medium
+
+  * v0.6.4 upstream release.
+  * Bump Standards version
+  * Fix typo in description.
+  * Add missing bloc in copyright file.
+  * Updated source format.
+  * Removed path from command in postinst.
+
+ -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Mon, 30 Jun 2025 12:48:54 -0000
+
 debmonitor (0.6.3-1) unstable; urgency=medium
 
   * v0.6.3 upstream release.
