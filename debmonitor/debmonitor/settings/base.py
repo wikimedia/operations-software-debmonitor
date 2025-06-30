@@ -23,7 +23,7 @@ DEBMONITOR_VERIFY_CLIENTS = DEBMONITOR_CONFIG.get('VERIFY_CLIENTS', True)
 DEBMONITOR_PROXY_HOSTS = DEBMONITOR_CONFIG.get('PROXY_HOSTS', [])
 DEBMONITOR_PROXY_IMAGES = DEBMONITOR_CONFIG.get('PROXY_IMAGES', [])
 DEBMONITOR_HOST_EXTERNAL_LINKS = DEBMONITOR_CONFIG.get('HOST_EXTERNAL_LINKS', {})
-DEBMONITOR_IMAGES_EXTERNAL_LINKS = DEBMONITOR_CONFIG.get('IMAGE_EXTERNAL_LINKS', {})
+DEBMONITOR_IMAGE_EXTERNAL_LINKS = DEBMONITOR_CONFIG.get('IMAGE_EXTERNAL_LINKS', {})
 DEBMONITOR_SEARCH_MIN_LENGTH = DEBMONITOR_CONFIG.get('SEARCH_MIN_LENGTH', 3)
 DEBMONITOR_JAVASCRIPT_STORAGE = DEBMONITOR_CONFIG.get('JAVASCRIPT_STORAGE', 'Debian')
 
@@ -222,12 +222,16 @@ elif DEBMONITOR_CONFIG.get('LDAP', {}):
 
 # Content-Security-Policy
 CSP_DEFAULT_SRC = ("'self'")
+# This will generate script-src and style-src CSP headers so they will not inherit from default-src
+CSP_INCLUDE_NONCE_IN = ("script-src", "style-src")
 # Define the specific config only when differing from default-src
 if DEBMONITOR_JAVASCRIPT_STORAGE != "Debian":
     CSP_SCRIPT_SRC = ("'self'", "https://cdn.jsdelivr.net/npm/")
     CSP_STYLE_SRC = ("'self'", "https://cdn.jsdelivr.net/npm/")
+else:
+    CSP_SCRIPT_SRC = ("'self'")
+    CSP_STYLE_SRC = ("'self'")
 
-CSP_INCLUDE_NONCE_IN = ("script-src", "style-src")
 CSP_IMG_SRC = ("'self'", 'data:')
 CSP_OBJECT_SRC = ("'none'",)
 CSP_FRAME_SRC = ("'none'",)
