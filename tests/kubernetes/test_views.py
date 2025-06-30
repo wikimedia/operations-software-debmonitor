@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from django.urls import resolve, reverse
 
+from debmonitor.middleware import APPLICATION_JSON
 from kubernetes import views
 from tests.conftest import setup_auth_settings, validate_status_code
 
@@ -23,6 +24,15 @@ PAYLOAD_UPDATE_NEW_OK = """{
     "cluster": "ClusterB",
     "images": {
         "registry.example.com/component/image-deployed:1.2.3-1": {
+            "NamespaceB": 1
+        }
+    }
+}
+"""
+PAYLOAD_UPDATE_MISSING_IMAGE = """{
+    "cluster": "ClusterB",
+    "images": {
+    "registry.example.com/component/image-missing:1.2.3-1": {
             "NamespaceB": 1
         }
     }
@@ -85,10 +95,14 @@ def test_update_invalid_payload(client, settings, require_login, verify_clients)
     validate_status_code(response, require_login, verify_clients=verify_clients, default=400)
 
 
-def test_update_no_cluster(client, settings, require_login, verify_clients):
-    """Trying to call update with a payload missing the cluster should return 400 Bad Request, if authenticated."""
+@pytest.mark.parametrize('payload', (
+    '{"images": {}}',
+    '{"cluster": "ClusterA", "images": []}',
+))
+def test_update_bad_paylod(client, settings, require_login, verify_clients, payload):
+    """Trying to call update with a payload missing some parts should return 400 Bad Request, if authenticated."""
     setup_auth_settings(settings, require_login, verify_clients)
-    response = client.generic('POST', UPDATE_URL, '{"images": []}')
+    response = client.generic('POST', UPDATE_URL, payload)
     validate_status_code(response, require_login, verify_clients=verify_clients, default=400)
 
 
@@ -98,7 +112,11 @@ def test_update_existing_ok(client):
     response = client.generic('POST', UPDATE_URL, PAYLOAD_UPDATE_EXISTING_OK)
     assert views.KubernetesImage.objects.get(pk=1).instances == 3
     assert response.status_code == 201
-    assert response['Content-Type'] == 'text/plain'
+    assert response['Content-Type'] == APPLICATION_JSON
+    response_data = response.json()
+    assert response_data['success']
+    assert response_data['missing'] == []
+    assert response_data['errors'] == []
 
 
 @pytest.mark.django_db
@@ -107,7 +125,11 @@ def test_update_new_ok(client):
     response = client.generic('POST', UPDATE_URL, PAYLOAD_UPDATE_NEW_OK)
     kub_image = views.KubernetesImage.objects.get(pk=2)
     assert response.status_code == 201
-    assert response['Content-Type'] == 'text/plain'
+    assert response['Content-Type'] == APPLICATION_JSON
+    response_data = response.json()
+    assert response_data['success']
+    assert response_data['missing'] == []
+    assert response_data['errors'] == []
     assert kub_image.cluster == 'ClusterB'
     assert kub_image.namespace == 'NamespaceB'
     assert kub_image.image.name == 'registry.example.com/component/image-deployed:1.2.3-1'
@@ -116,13 +138,32 @@ def test_update_new_ok(client):
 
 @pytest.mark.django_db
 def test_update_key_error(client):
-    """Updating with a payload missing some keys should return a 400."""
+    """Updating with a payload missing some keys should skip that image and return the error."""
     response = client.generic('POST', UPDATE_URL, PAYLOAD_UPDATE_VALUE_ERROR)
-    assert response.status_code == 400
-    message = ("Unable to update Kubernetes images for cluster ClusterB: Field 'instances' "
-               "expected a number but got 'invalid'.")
-    assert message in response.content.decode('utf-8')
-    assert response['Content-Type'] == 'text/plain'
+    assert response.status_code == 202
+    assert response['Content-Type'] == APPLICATION_JSON
+    response_data = response.json()
+    assert not response_data['success']
+    assert len(response_data['errors']) == 1
+    assert not response_data['missing']
+    error = response_data['errors'][0]
+    assert error['image'] == 'registry.example.com/component/image-deployed:1.2.3-1'
+    assert error['cluster'] == 'ClusterB'
+    assert error['namespace'] == 'NamespaceB'
+    assert error['error'] == "Field 'instances' expected a number but got 'invalid'."
+
+
+@pytest.mark.django_db
+def test_update_missing_image(client):
+    """Updating with a payload referring to an image missing from Debmonitor should skip that image."""
+    response = client.generic('POST', UPDATE_URL, PAYLOAD_UPDATE_MISSING_IMAGE)
+    assert response.status_code == 202
+    assert response['Content-Type'] == APPLICATION_JSON
+    response_data = response.json()
+    assert not response_data['success']
+    assert len(response_data['missing']) == 1
+    assert not response_data['errors']
+    assert response_data['missing'] == ['registry.example.com/component/image-missing:1.2.3-1']
 
 
 @pytest.mark.django_db
