@@ -115,8 +115,10 @@ class DetailView(View):
             'datatables_column_defs': json.dumps(
                 [{'targets': [3], 'visible': False}, {'targets': [1, 2], 'orderable': False}]),
             'datatables_page_length': -1,
-            'external_links': {key: value.format(fqdn=image.name, imagename=image.name.split('.')[0])
-                               for key, value in settings.DEBMONITOR_IMAGES_EXTERNAL_LINKS.items()},
+            'external_links': {
+                key: value.format(fqdn=image.name, image_path=image.name.split('/', 1)[1].rsplit(':', 1)[0])
+                for key, value in settings.DEBMONITOR_IMAGE_EXTERNAL_LINKS.items()
+            },
             'image': image,
             'image_packages': image_packages,
             'section': 'images',
