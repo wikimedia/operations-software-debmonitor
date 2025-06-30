@@ -73,33 +73,51 @@ def update_kubernetes_images(request):
             'JSON Payload missing required "cluster" key with the cluster name', content_type=TEXT_PLAIN)
 
     images = payload.get('images', {})
+    if not isinstance(images, dict):
+        return http.HttpResponseBadRequest(
+            'JSON Payload key "images" is not a dictionary', content_type=TEXT_PLAIN)
+
     message = f'Unable to update Kubernetes images for cluster {cluster}'
     try:
-        _update_v1(request, cluster, images)
-    except (KeyError, TypeError, ValueError, Image.DoesNotExist) as e:
-        logger.exception(message)
-        return http.HttpResponseBadRequest(f'{message}: {e}', content_type=TEXT_PLAIN)
+        response = _update_v1(cluster, images)
     except Exception as e:  # Force a response to avoid using the HTML template for all other 500s
         logger.exception(message)
         return http.HttpResponseServerError(f'{message}: {e}', content_type=TEXT_PLAIN)
     else:
-        return http.HttpResponse(status=201, content_type=TEXT_PLAIN)
+        response['success'] = False if response['missing'] or response['errors'] else True
+        return http.JsonResponse(response, status=201 if response['success'] else 202)
 
 
-def _update_v1(request, cluster, images):
+def _update_v1(cluster, images):
     """Update API v1."""
     start_time = timezone.now()
 
     counter = 0
+    failed = {'missing': [], 'errors': []}
     for name, data in images.items():
-        image = Image.objects.get(name=name)
-        for namespace, instances in data.items():
-            kub_image, _ = KubernetesImage.objects.update_or_create(
-                defaults={'instances': instances}, cluster=cluster, namespace=namespace, image=image)
-            counter += 1
+        try:
+            image = Image.objects.get(name=name)
+        except Image.DoesNotExist:
+            failed['missing'].append(name)
+            continue
 
-    logger.info("Tracked %d deployed Kubernetes images for cluster '%s'", counter, cluster)
+        for namespace, instances in data.items():
+            try:
+                kub_image, _ = KubernetesImage.objects.update_or_create(
+                    defaults={'instances': instances}, cluster=cluster, namespace=namespace, image=image)
+                counter += 1
+            except Exception as e:
+                failed['errors'].append({'image': name, 'cluster': cluster, 'namespace': namespace, 'error': str(e)})
+
+    logger.info(
+        "Tracked %d deployed Kubernetes images for cluster '%s', skipped %d missing images and %d that errored out",
+        counter,
+        cluster,
+        len(failed['missing']),
+        len(failed['errors']),
+    )
 
     # Delete orphaned entries based on the modification datetime for the given cluster
     res = KubernetesImage.objects.filter(cluster=cluster, modified__lt=start_time).delete()
     logger.info("Deleted %d Kubernetes images orphaned entries for cluster '%s'", res[0], cluster)
+    return failed

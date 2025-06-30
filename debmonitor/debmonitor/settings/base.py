@@ -221,10 +221,13 @@ elif DEBMONITOR_CONFIG.get('LDAP', {}):
         setattr(sys.modules[__name__], key, value)
 
 # Content-Security-Policy
-# TODO: remove unsafe-inline when not needed anymore for inline script/style modifications by the libaries used
-CSP_DEFAULT_SRC = ("'self'", "'unsafe-inline'")
-# TODO: this can be activated for default-src only when unsafe-inline is removed from CSP_DEFAULT_SRC
-CSP_INCLUDE_NONCE_IN = ()
+CSP_DEFAULT_SRC = ("'self'")
+# Define the specific config only when differing from default-src
+if DEBMONITOR_JAVASCRIPT_STORAGE != "Debian":
+    CSP_SCRIPT_SRC = ("'self'", "https://cdn.jsdelivr.net/npm/")
+    CSP_STYLE_SRC = ("'self'", "https://cdn.jsdelivr.net/npm/")
+
+CSP_INCLUDE_NONCE_IN = ("script-src", "style-src")
 CSP_IMG_SRC = ("'self'", 'data:')
 CSP_OBJECT_SRC = ("'none'",)
 CSP_FRAME_SRC = ("'none'",)
