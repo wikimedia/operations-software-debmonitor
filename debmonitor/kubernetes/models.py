@@ -9,9 +9,11 @@ class KubernetesImage(models.Model):
     cluster = models.CharField(max_length=255, help_text='Kubernetes cluster name.')
     namespace = models.CharField(max_length=255, help_text='Kubernetes cluster namespace name.')
     image = models.ForeignKey(
-        Image, on_delete=models.PROTECT, related_name='instances', verbose_name='container image',
+        Image, on_delete=models.PROTECT, related_name='namespaces', verbose_name='image',
         help_text='Container image deployed in this Kubernetes cluster and namespace.')
-    instances = models.PositiveIntegerField(help_text='How many running instances of this image.')
+    containers = models.PositiveIntegerField(
+        help_text='How many running containers in this cluster and namespace this image has.',
+    )
 
     created = models.DateTimeField(auto_now_add=True, help_text='Datetime of the creation of this object.')
     modified = models.DateTimeField(auto_now=True, help_text='Datetime of the last modification of this object.')

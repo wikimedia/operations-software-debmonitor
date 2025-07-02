@@ -547,7 +547,7 @@
             "cluster": "ClusterA",
             "namespace": "NamespaceA",
             "image": 2,
-            "instances": 2,
+            "containers": 2,
             "created": "2025-06-24T11:28:04.311Z",
             "modified": "2025-06-24T11:28:04.311Z"
         }

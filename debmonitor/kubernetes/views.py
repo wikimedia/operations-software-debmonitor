@@ -27,7 +27,7 @@ def index(request):
         {'title': 'Namespace'},
         {'title': 'Image name', 'tooltip':
          'Image that is deployed in the Kubernetes cluster and namespace'},
-        {'title': 'Instances', 'tooltip': 'Number of instances deployed'},
+        {'title': '# of containers', 'tooltip': 'Number of containers deployed'},
     ]
 
     args = {
@@ -101,10 +101,10 @@ def _update_v1(cluster, images):
             failed['missing'].append(name)
             continue
 
-        for namespace, instances in data.items():
+        for namespace, containers in data.items():
             try:
                 kub_image, _ = KubernetesImage.objects.update_or_create(
-                    defaults={'instances': instances}, cluster=cluster, namespace=namespace, image=image)
+                    defaults={'containers': containers}, cluster=cluster, namespace=namespace, image=image)
                 counter += 1
             except Exception as e:
                 failed['errors'].append({'image': name, 'cluster': cluster, 'namespace': namespace, 'error': str(e)})
