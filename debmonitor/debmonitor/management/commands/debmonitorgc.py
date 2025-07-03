@@ -24,7 +24,7 @@ class Command(BaseCommand):
 
         # GC old images until they will be deleted when deprecated externally from Debmonitor
         res = Image.objects.select_related(None).filter(
-            modified__lt=timezone.now() - timedelta(days=90), instances=None).delete()
+            modified__lt=timezone.now() - timedelta(days=90), namespaces=None).delete()
         # Getting the specific counter of Images deleted because the Django reported total number of deleted objects
         # includes also the ones deleted by cascade constrains like the ImagePackage objects.
         # The returned structure is:

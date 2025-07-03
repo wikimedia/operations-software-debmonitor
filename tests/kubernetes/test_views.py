@@ -110,7 +110,7 @@ def test_update_bad_paylod(client, settings, require_login, verify_clients, payl
 def test_update_existing_ok(client):
     """Updating an existing Kubernetes image with a correct payload should return 201 Created."""
     response = client.generic('POST', UPDATE_URL, PAYLOAD_UPDATE_EXISTING_OK)
-    assert views.KubernetesImage.objects.get(pk=1).instances == 3
+    assert views.KubernetesImage.objects.get(pk=1).containers == 3
     assert response.status_code == 201
     assert response['Content-Type'] == APPLICATION_JSON
     response_data = response.json()
@@ -123,7 +123,7 @@ def test_update_existing_ok(client):
 def test_update_new_ok(client):
     """Updating with a new Kubernetes image with a correct payload should return 201 Created."""
     response = client.generic('POST', UPDATE_URL, PAYLOAD_UPDATE_NEW_OK)
-    kub_image = views.KubernetesImage.objects.get(pk=2)
+    kub_image = views.KubernetesImage.objects.last()
     assert response.status_code == 201
     assert response['Content-Type'] == APPLICATION_JSON
     response_data = response.json()
@@ -133,7 +133,7 @@ def test_update_new_ok(client):
     assert kub_image.cluster == 'ClusterB'
     assert kub_image.namespace == 'NamespaceB'
     assert kub_image.image.name == 'registry.example.com/component/image-deployed:1.2.3-1'
-    assert kub_image.instances == 1
+    assert kub_image.containers == 1
 
 
 @pytest.mark.django_db
@@ -150,7 +150,7 @@ def test_update_key_error(client):
     assert error['image'] == 'registry.example.com/component/image-deployed:1.2.3-1'
     assert error['cluster'] == 'ClusterB'
     assert error['namespace'] == 'NamespaceB'
-    assert error['error'] == "Field 'instances' expected a number but got 'invalid'."
+    assert error['error'] == "Field 'containers' expected a number but got 'invalid'."
 
 
 @pytest.mark.django_db
