@@ -6,6 +6,7 @@
   <td>{{ image.cluster }}</td>
   <td>{{ image.namespace }}</td>
   <td><a href="{% url 'images:detail' image.image.name %}">{{ image.image.name }}</a></td>
+  <td>{{ image.image.os }}</td>
   <td>{{ image.containers }}</td>
 </tr>
 {% endfor %}
