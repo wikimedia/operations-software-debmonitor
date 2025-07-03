@@ -27,6 +27,7 @@ def index(request):
         {'title': 'Namespace'},
         {'title': 'Image name', 'tooltip':
          'Image that is deployed in the Kubernetes cluster and namespace'},
+        {'title': 'OS', 'tooltip': 'Operating System that the image is running'},
         {'title': '# of containers', 'tooltip': 'Number of containers deployed'},
     ]
 
