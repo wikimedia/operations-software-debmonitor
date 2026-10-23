@@ -1,0 +1,6 @@
+{
+    "JAVASCRIPT_STORAGE": "CDN",
+    "VERIFY_CLIENTS": false,
+    "SEARCH_MIN_LENGTH": 1,
+    "LOG_DB_QUERIES": true
+}

@@ -8,6 +8,7 @@ It provides also a standalone command line script (CLI) that, when distributed i
 automatically update DebMonitor's database using APT and DPKG hooks.
 
 
+
 Target configuration
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -98,3 +99,22 @@ option (possible values ``1``, ``2``, ``3`` or ``CAS_2_SAML_1.0``).
 By default users are created in the database after successful CAS
 authentication, this can be disabled by setting ``CAS_CREATE_USER`` to
 ``FALSE``.
+
+Local Development
+^^^^^^^^^^^^^^^^^
+
+The tests can be run with ``tox``. Ensure python3.11 is installed and set with ``pyenv`` or a similar tool.
+
+To run a development server, you could fill a .envrc with something like this:
+
+.. code-block:: shell
+    export DJANGO_SETTINGS_MODULE=debmonitor.settings.test
+    export DEBMONITOR_CONFIG=$(expand_path debmonitor/debmonitor/settings/debmonitor-config-dev.json)
+    layout python python3.11
+
+
+
+Then ``cd`` to debmonitor
+
+and run: ``python3 manage.py migrate && python manager.py runserever``
+
