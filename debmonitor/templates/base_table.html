@@ -163,6 +163,10 @@ $(document).ready(function() {
             }
         },
         {% endif %}
+        'stateLoadParams': function (settings, data) {
+            delete data.columns;
+            delete data.childRows;
+        }
     });
 });
 {% endblock %}
